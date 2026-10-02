@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 /// <summary>
 /// PlayerHealth: Quan ly HP, nhan damage va xu ly death.
@@ -77,6 +77,20 @@ public class PlayerHealth : MonoBehaviour
         // Bat ky sau khi bi damage
         isInvincible = true;
         invincibleTimer = invincibleDuration;
+
+        if (currentHealth <= 0)
+            Die();
+    }
+
+    /// <summary>Tru mau do ngat khi doc hoac hoi nuoc nong (bo qua invincibility de tru mau dinh ky dung nhip).</summary>
+    public void TakeEnvironmentalDamage(int amount)
+    {
+        if (isDead) return;
+        if (amount <= 0) return;
+
+        currentHealth = Mathf.Max(0, currentHealth - amount);
+        OnHealthChanged?.Invoke(currentHealth, maxHealth);
+        OnPlayerDamaged?.Invoke();
 
         if (currentHealth <= 0)
             Die();

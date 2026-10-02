@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.AI;
 
 /// <summary>
@@ -91,9 +91,17 @@ public class RobotAI : MonoBehaviour
         GameObject playerGO = GameObject.FindGameObjectWithTag("Player");
         if (playerGO != null) playerTransform = playerGO.transform;
 
-        // Bat dau inactive
-        agent.enabled = false;
-        SetSensorColor(patrolColor);
+        string sceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+        if (sceneName.Contains("Level3") || sceneName.Contains("Helipad") || (GameState.Instance != null && GameState.Instance.PowerRestored))
+        {
+            ActivateRobot();
+        }
+        else
+        {
+            // Bat dau inactive
+            agent.enabled = false;
+            SetSensorColor(patrolColor);
+        }
     }
 
     private void Update()

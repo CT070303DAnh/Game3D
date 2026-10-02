@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 /// <summary>
 /// PlayerInteraction: Kiem tra IInteractable gan player, hien thi prompt va goi Interact().
@@ -54,14 +54,23 @@ public class PlayerInteraction : MonoBehaviour
     // ───────────────────────────────────────────────
     private void DetectInteractable()
     {
-        Collider[] hits = Physics.OverlapSphere(transform.position, interactRange, interactableMask);
+        LayerMask mask = interactableMask.value == 0 ? ~0 : interactableMask;
+        Collider[] hits = Physics.OverlapSphere(transform.position, interactRange, mask);
         IInteractable nearest = null;
         float nearestDist = float.MaxValue;
 
         foreach (Collider col in hits)
         {
-            IInteractable interactable = col.GetComponent<IInteractable>();
+            if (col.transform.root == transform.root) continue;
+
+            IInteractable interactable = col.GetComponentInParent<IInteractable>();
+            if (interactable == null)
+                interactable = col.GetComponent<IInteractable>();
+            if (interactable == null)
+                interactable = col.GetComponentInChildren<IInteractable>();
+
             if (interactable == null) continue;
+            if (!interactable.CanInteract) continue;
 
             float dist = Vector3.Distance(transform.position, col.transform.position);
             if (dist < nearestDist)
@@ -95,9 +104,10 @@ public class PlayerInteraction : MonoBehaviour
     private void HandleInteractInput()
     {
         if (currentInteractable == null) return;
-        if (input == null) return;
 
-        if (input.InteractPressed)
+        bool interactPressed = (input != null && input.InteractPressed) || Input.GetKeyDown(KeyCode.E);
+
+        if (interactPressed)
         {
             Debug.Log($"[PlayerInteraction] Interacting with: {currentInteractable}");
             currentInteractable.Interact();

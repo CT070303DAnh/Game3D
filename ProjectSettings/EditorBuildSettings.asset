@@ -11,6 +11,12 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_Project/Scenes/Lab.unity
     guid: 15d8986b9b3ad5e428fe27f067075a2c
+  - enabled: 1
+    path: Assets/_Project/Scenes/Level2_Reactor.unity
+    guid: 1cead5bb6c8d3004191be162f3ff6113
+  - enabled: 1
+    path: Assets/_Project/Scenes/Level3_Helipad.unity
+    guid: 208f98fd2b1bb4a4ca356e84ec175891
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

@@ -28,9 +28,13 @@ public class ExitDoor : MonoBehaviour, IInteractable
             NotificationUI.ShowMessage("Cửa thoát đang khóa. Hoàn thành tất cả nhiệm vụ trước.");
             return;
         }
-        // WIN!
-        Debug.Log("[ExitDoor] Player escaped!");
-        if (GameManager.Instance != null) GameManager.Instance.TriggerWin();
+
+        Debug.Log("[ExitDoor] Player escaped through exit door!");
+        NotificationUI.ShowMessage("HOÀN THÀNH MÀN 1! Đang tiến vào Khu Lò Phản Ứng...");
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.LoadNextLevel();
+        }
     }
 
     private void OnUnlocked()

@@ -64,7 +64,18 @@ public class PlayerController : MonoBehaviour
         characterController = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
         // Kiem tra co AnimatorController chua de tranh warning spam
-        hasAnimatorController = animator.runtimeAnimatorController != null;
+        hasAnimatorController = animator != null && animator.runtimeAnimatorController != null;
+
+        // Xoa CapsuleCollider thua neu duoc tao tu Primitive Capsule
+        var capCol = GetComponent<CapsuleCollider>();
+        if (capCol != null)
+        {
+            Destroy(capCol);
+        }
+
+        if (walkSpeed <= 0f) walkSpeed = 3.5f;
+        if (runSpeed <= 0f) runSpeed = 5.5f;
+        if (gravity >= 0f) gravity = -20f;
     }
 
     // Cache camera mode
@@ -74,7 +85,11 @@ public class PlayerController : MonoBehaviour
     {
         input = FindFirstObjectByType<MobileInputController>();
         if (input == null)
-            Debug.LogWarning("[PlayerController] No IMovementInput found. Player wont move.");
+        {
+            // Tu dong tao MobileInputController de dam bao input luon ton tai
+            var micGO = new GameObject("MobileInputController_Auto");
+            input = micGO.AddComponent<MobileInputController>();
+        }
 
         // Auto-detect camera mode
         isFPS    = FindFirstObjectByType<FirstPersonCamera>() != null;
@@ -84,12 +99,30 @@ public class PlayerController : MonoBehaviour
             cameraTransform = Camera.main.transform;
 
         string mode = isFPS ? "FPS" : (pubgCam != null ? "PUBG TPS" : "Classic TPS");
-        Debug.Log("[PlayerController] Camera mode: " + mode);
     }
 
     private void Update()
     {
-        if (GameManager.Instance != null && !GameManager.Instance.IsPlaying) return;
+        // Khong di chuyen khi game dang tam dung hoac mo menu pause / game over
+        if (Time.timeScale == 0f) return;
+        if (GameManager.Instance != null && 
+           (GameManager.Instance.CurrentPhase == GameManager.GamePhase.Paused || 
+            GameManager.Instance.CurrentPhase == GameManager.GamePhase.GameOver ||
+            GameManager.Instance.CurrentPhase == GameManager.GamePhase.MainMenu))
+        {
+            return;
+        }
+
+        // Bao ve chong roi vao vung void
+        if (transform.position.y < -3f)
+        {
+            if (characterController != null) characterController.enabled = false;
+            transform.position = new Vector3(0, 1.2f, -8f);
+            velocity = Vector3.zero;
+            if (characterController != null) characterController.enabled = true;
+            NotificationUI.ShowMessage("ĐÃ ĐƯA BẠN VỀ KHU VỰC AN TOÀN!");
+            return;
+        }
 
         HandleGroundCheck();
         HandleGravity();
@@ -103,11 +136,17 @@ public class PlayerController : MonoBehaviour
     // ───────────────────────────────────────────────
     private void HandleGroundCheck()
     {
-        Vector3 checkPos = groundCheck != null
-            ? groundCheck.position
-            : transform.position + Vector3.down * 0.1f;
+        isGrounded = characterController != null && characterController.isGrounded;
 
-        isGrounded = Physics.CheckSphere(checkPos, groundCheckRadius, groundMask);
+        if (!isGrounded)
+        {
+            Vector3 checkPos = groundCheck != null
+                ? groundCheck.position
+                : transform.position + Vector3.down * 0.1f;
+
+            LayerMask mask = groundMask.value != 0 ? groundMask : ~LayerMask.GetMask("Ignore Raycast", "UI");
+            isGrounded = Physics.CheckSphere(checkPos, groundCheckRadius, mask);
+        }
 
         // Reset Y velocity khi cham dat
         if (isGrounded && velocity.y < -2f)
@@ -119,7 +158,9 @@ public class PlayerController : MonoBehaviour
     // ───────────────────────────────────────────────
     private void HandleGravity()
     {
+        if (characterController == null) return;
         velocity.y += gravity * Time.deltaTime;
+        velocity.y = Mathf.Max(velocity.y, -30f); // Gioi han toc do roi
         characterController.Move(velocity * Time.deltaTime);
     }
 
@@ -128,10 +169,29 @@ public class PlayerController : MonoBehaviour
     // ───────────────────────────────────────────────
     private void HandleMovement()
     {
-        if (input == null) return;
+        if (characterController == null) return;
 
-        Vector2 moveInput = input.Move;
-        bool isRunning = input.RunPressed;
+        Vector2 moveInput = Vector2.zero;
+        bool isRunning = false;
+
+        if (input != null)
+        {
+            moveInput = input.Move;
+            isRunning = input.RunPressed;
+        }
+
+        // Fallback ban phim PC truc tiep neu joystick = 0
+        if (moveInput.sqrMagnitude < 0.01f)
+        {
+            float h = 0f, v = 0f;
+            if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow))  h -= 1f;
+            if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) h += 1f;
+            if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow))  v -= 1f;
+            if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow))    v += 1f;
+            moveInput = new Vector2(h, v);
+            if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+                isRunning = true;
+        }
 
         if (moveInput.magnitude < 0.1f)
         {
@@ -174,13 +234,12 @@ public class PlayerController : MonoBehaviour
     // ───────────────────────────────────────────────
     private void HandleJump()
     {
-        if (input == null) return;
-
-        if (input.JumpPressed && isGrounded)
+        bool jumpReq = (input != null && input.JumpPressed) || Input.GetKeyDown(KeyCode.Space);
+        if (jumpReq && isGrounded)
         {
-            // v = sqrt(2 * g * h)  — vat ly chinh xac
             velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
-            if (hasAnimatorController) animator.SetTrigger(HashJump);
+            if (hasAnimatorController && animator != null)
+                animator.SetTrigger(HashJump);
         }
     }
 

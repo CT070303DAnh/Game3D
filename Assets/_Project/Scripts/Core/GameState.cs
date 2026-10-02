@@ -21,6 +21,7 @@ public class GameState : MonoBehaviour
     [SerializeField] private bool batteryCollected;
     [SerializeField] private bool laboratoryKeyCollected;
     [SerializeField] private bool accessCodeFound;
+    [SerializeField] private bool jetFuelCollected;
 
     // ───────────────────────────────────────────────
     // Puzzle / World State
@@ -29,6 +30,9 @@ public class GameState : MonoBehaviour
     [SerializeField] private bool powerRestored;
     [SerializeField] private bool accessCodeSolved;
     [SerializeField] private bool exitUnlocked;
+    [SerializeField] private bool radarActivated;
+    [SerializeField] private bool domeGateOpened;
+    [SerializeField] private bool helipadEscaped;
 
     // ───────────────────────────────────────────────
     // Events — phat khi state thay doi
@@ -38,6 +42,10 @@ public class GameState : MonoBehaviour
     public static event System.Action OnPowerRestored;
     public static event System.Action OnAccessCodeSolved;
     public static event System.Action OnExitUnlocked;
+    public static event System.Action OnJetFuelCollected;
+    public static event System.Action OnRadarActivated;
+    public static event System.Action OnDomeGateOpened;
+    public static event System.Action OnHelipadEscaped;
 
     // ───────────────────────────────────────────────
     // Properties (read-only tu ngoai)
@@ -47,9 +55,13 @@ public class GameState : MonoBehaviour
     public bool BatteryCollected => batteryCollected;
     public bool LaboratoryKeyCollected => laboratoryKeyCollected;
     public bool AccessCodeFound => accessCodeFound;
+    public bool JetFuelCollected => jetFuelCollected;
     public bool PowerRestored => powerRestored;
     public bool AccessCodeSolved => accessCodeSolved;
     public bool ExitUnlocked => exitUnlocked;
+    public bool RadarActivated => radarActivated;
+    public bool DomeGateOpened => domeGateOpened;
+    public bool HelipadEscaped => helipadEscaped;
 
     private static GameState _instance;
     public static GameState Instance 
@@ -107,6 +119,10 @@ public class GameState : MonoBehaviour
         powerRestored = false;
         accessCodeSolved = false;
         exitUnlocked = false;
+        jetFuelCollected = false;
+        radarActivated = false;
+        domeGateOpened = false;
+        helipadEscaped = false;
         Debug.Log("[GameState] State reset.");
     }
 
@@ -160,6 +176,8 @@ public class GameState : MonoBehaviour
         OnPowerRestored?.Invoke();
     }
 
+    public void RestorePower() => SetPowerRestored();
+
     public void SetAccessCodeSolved()
     {
         if (accessCodeSolved) return;
@@ -167,6 +185,38 @@ public class GameState : MonoBehaviour
         Debug.Log("[GameState] Access Code solved!");
         OnAccessCodeSolved?.Invoke();
         CheckExitCondition();
+    }
+
+    public void CollectJetFuel()
+    {
+        if (jetFuelCollected) return;
+        jetFuelCollected = true;
+        Debug.Log("[GameState] Jet Fuel collected.");
+        OnJetFuelCollected?.Invoke();
+    }
+
+    public void SetRadarActivated()
+    {
+        if (radarActivated) return;
+        radarActivated = true;
+        Debug.Log("[GameState] Radar activated.");
+        OnRadarActivated?.Invoke();
+    }
+
+    public void SetDomeGateOpened()
+    {
+        if (domeGateOpened) return;
+        domeGateOpened = true;
+        Debug.Log("[GameState] Dome Gate opened.");
+        OnDomeGateOpened?.Invoke();
+    }
+
+    public void SetHelipadEscaped()
+    {
+        if (helipadEscaped) return;
+        helipadEscaped = true;
+        Debug.Log("[GameState] Helipad Escaped! Victory!");
+        OnHelipadEscaped?.Invoke();
     }
 
     // ───────────────────────────────────────────────

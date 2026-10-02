@@ -13,11 +13,16 @@ public class GameManager : MonoBehaviour
     // (Instance da duoc chuyen xuong duoi de Auto-Spawn)
 
     // ───────────────────────────────────────────────
-    // Scene names
+    // Scene names & Level Progression
     // ───────────────────────────────────────────────
     [Header("Scene Names")]
     [SerializeField] private string mainMenuScene = "MainMenu";
     [SerializeField] private string gameplayScene = "Lab";
+    [SerializeField] private string[] levelScenes = new string[] { "Lab", "Level2_Reactor", "Level3_Helipad" };
+    [SerializeField] private int currentLevelIndex = 0;
+
+    public int CurrentLevelIndex => currentLevelIndex;
+    public string CurrentLevelScene => (currentLevelIndex >= 0 && currentLevelIndex < levelScenes.Length) ? levelScenes[currentLevelIndex] : gameplayScene;
 
     // ───────────────────────────────────────────────
     // Game State
@@ -68,15 +73,23 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
-        // Neu bat dau Play truc tiep trong gameplay scene (khong qua MainMenu),
-        // tu dong set phase sang Playing de PlayerController hoat dong ngay.
+        // Phat hien scene hien tai neu bat dau Play truc tiep
         string currentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-        if (CurrentPhase == GamePhase.MainMenu && currentScene == gameplayScene)
+        for (int i = 0; i < levelScenes.Length; i++)
+        {
+            if (levelScenes[i] == currentScene)
+            {
+                currentLevelIndex = i;
+                break;
+            }
+        }
+
+        if (CurrentPhase == GamePhase.MainMenu && currentScene != mainMenuScene)
         {
             CurrentPhase = GamePhase.Playing;
             Time.timeScale = 1f;
             OnGameStart?.Invoke();
-            Debug.Log("[GameManager] Auto-started: detected direct play in gameplay scene.");
+            Debug.Log($"[GameManager] Auto-started in scene: {currentScene} (Level {currentLevelIndex + 1})");
         }
     }
 
@@ -86,11 +99,39 @@ public class GameManager : MonoBehaviour
 
     public void StartGame()
     {
+        currentLevelIndex = 0;
         CurrentPhase = GamePhase.Playing;
         Time.timeScale = 1f;
-        SceneManager.LoadScene(gameplayScene);
+        SceneManager.LoadScene(levelScenes.Length > 0 ? levelScenes[0] : gameplayScene);
         OnGameStart?.Invoke();
-        Debug.Log("[GameManager] Game started.");
+        Debug.Log("[GameManager] Game started at Level 1.");
+    }
+
+    public void LoadNextLevel()
+    {
+        currentLevelIndex++;
+        if (currentLevelIndex < levelScenes.Length)
+        {
+            CurrentPhase = GamePhase.Playing;
+            Time.timeScale = 1f;
+            Debug.Log($"[GameManager] Loading Level {currentLevelIndex + 1}: {levelScenes[currentLevelIndex]}");
+            SceneManager.LoadScene(levelScenes[currentLevelIndex]);
+            OnGameStart?.Invoke();
+        }
+        else
+        {
+            // Da hoan thanh tat ca cac man -> Chien thang toan dien!
+            TriggerWin();
+        }
+    }
+
+    public void LoadLevel(int levelIdx)
+    {
+        currentLevelIndex = Mathf.Clamp(levelIdx, 0, levelScenes.Length - 1);
+        CurrentPhase = GamePhase.Playing;
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(levelScenes[currentLevelIndex]);
+        OnGameStart?.Invoke();
     }
 
     public void TriggerWin()
@@ -139,8 +180,11 @@ public class GameManager : MonoBehaviour
     {
         CurrentPhase = GamePhase.Playing;
         Time.timeScale = 1f;
-        SceneManager.LoadScene(gameplayScene);
-        Debug.Log("[GameManager] Restarting game.");
+        string sceneToReload = (currentLevelIndex >= 0 && currentLevelIndex < levelScenes.Length)
+            ? levelScenes[currentLevelIndex]
+            : SceneManager.GetActiveScene().name;
+        SceneManager.LoadScene(sceneToReload);
+        Debug.Log($"[GameManager] Restarting level scene: {sceneToReload}.");
     }
 
     public void QuitGame()

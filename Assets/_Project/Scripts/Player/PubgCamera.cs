@@ -84,7 +84,7 @@ public class PubgCamera : MonoBehaviour
         if (target == null) return;
 
         bool isPlaying = GameManager.Instance == null || GameManager.Instance.IsPlaying;
-        if (!isPlaying || Time.timeScale == 0f || AccessCodeUI.IsOpen || TerminalUI.IsOpen)
+        if (!isPlaying || Time.timeScale == 0f || AccessCodeUI.IsOpen || TerminalUI.IsOpen || ElevatorKeypadUI.IsOpen)
         {
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;

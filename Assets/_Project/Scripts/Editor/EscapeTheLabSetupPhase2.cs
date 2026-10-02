@@ -68,7 +68,7 @@ public class EscapeTheLabSetupPhase2 : Editor
     }
 
     [MenuItem("EscapeTheLab/🎥 Switch to FIRST PERSON Camera")]
-    public static void SwitchToFirstPersonCamera()
+    public static void SwitchToFirstPersonCamera(bool showDialog = true)
     {
         if (!EnsureEditMode("Switch to FIRST PERSON Camera")) return;
         // 1. Tim Player
@@ -85,27 +85,40 @@ public class EscapeTheLabSetupPhase2 : Editor
         if (eyePoint == null)
         {
             GameObject ep = new GameObject("EyePoint");
-            ep.transform.SetParent(player.transform);
-            ep.transform.localPosition = new Vector3(0f, 0.75f, 0.1f); // Gan dau capsule
+            ep.transform.SetParent(player.transform, false);
+            ep.transform.localPosition = new Vector3(0f, 1.6f, 0.12f); // Mat ngang tam nhin
             ep.transform.localRotation = Quaternion.identity;
             eyePoint = ep.transform;
             Debug.Log("[Setup] Created EyePoint on Player.");
         }
+        else
+        {
+            eyePoint.localPosition = new Vector3(0f, 1.6f, 0.12f);
+        }
 
-        // 3. Xoa ThirdPersonCamera cu (va CameraRig neu co)
+        // 3. Xoa ThirdPersonCamera & CameraRig_PUBG cu neu co
         var oldTPC = Object.FindFirstObjectByType<ThirdPersonCamera>();
         if (oldTPC != null)
         {
             GameObject oldRig = oldTPC.gameObject;
-            // Lay Main Camera ra khoi rig truoc
             Camera mainCam = Camera.main;
             if (mainCam != null && mainCam.transform.parent == oldRig.transform)
-            {
                 mainCam.transform.SetParent(null);
-            }
             DestroyImmediate(oldRig);
-            Debug.Log("[Setup] Removed old ThirdPersonCamera CameraRig.");
         }
+
+        var oldPubg = Object.FindFirstObjectByType<PubgCamera>();
+        if (oldPubg != null)
+        {
+            GameObject oldRig = oldPubg.gameObject;
+            Camera mainCam = Camera.main;
+            if (mainCam != null && mainCam.transform.parent == oldRig.transform)
+                mainCam.transform.SetParent(null);
+            DestroyImmediate(oldRig);
+        }
+
+        var oldRigGO = GameObject.Find("CameraRig_PUBG");
+        if (oldRigGO != null) DestroyImmediate(oldRigGO);
 
         // 4. Gan Main Camera vao EyePoint
         Camera cam = Camera.main;
@@ -153,16 +166,19 @@ public class EscapeTheLabSetupPhase2 : Editor
 
         SaveScene();
 
-        EditorUtility.DisplayDialog("✅ First Person Camera!",
-            "Camera đã gắn vào mắt nhân vật!\n\n" +
-            "• EyePoint tạo tại đầu Player\n" +
-            "• Camera gắn vào EyePoint\n" +
-            "• FOV = 75° (phù hợp FPS)\n" +
-            "• Thân player ẩn (không thấy mình)\n\n" +
-            "Điều khiển:\n" +
-            "• Mobile: kéo nửa PHẢI màn hình để nhìn\n" +
-            "• PC/Editor: di chuột để nhìn (chuột bị khóa)\n" +
-            "• Joystick trái: di chuyển", "OK");
+        if (showDialog)
+        {
+            EditorUtility.DisplayDialog("✅ First Person Camera!",
+                "Camera đã gắn vào mắt nhân vật!\n\n" +
+                "• EyePoint tạo tại đầu Player\n" +
+                "• Camera gắn vào EyePoint\n" +
+                "• FOV = 75° (phù hợp FPS)\n" +
+                "• Thân player ẩn (không thấy mình)\n\n" +
+                "Điều khiển:\n" +
+                "• Mobile: kéo nửa PHẢI màn hình để nhìn\n" +
+                "• PC/Editor: di chuột để nhìn (chuột bị khóa)\n" +
+                "• Joystick trái: di chuyển", "OK");
+        }
     }
 
     [MenuItem("EscapeTheLab/🎮 Switch to PUBG TPS Camera (Recommended)")]
