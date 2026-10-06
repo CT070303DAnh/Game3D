@@ -66,10 +66,27 @@ public class MobileInputController : MonoBehaviour, IMovementInput
     private void Start()
     {
         SetupButtons();
-        // Tat tren PC/Editor neu muon dung keyboard
-#if UNITY_EDITOR
-        // Giu nguyen de test tren Editor
-#endif
+
+        // Dong bo voi Man 2: Khong hien thi nut E, Run, Jump, Joystick ao tren man hinh
+        HideOnScreenButtons();
+    }
+
+    public void HideOnScreenButtons()
+    {
+        Canvas canvas = GetComponent<Canvas>();
+        if (canvas != null) canvas.enabled = false;
+
+        Canvas parentCanvas = GetComponentInParent<Canvas>();
+        if (parentCanvas != null && parentCanvas.gameObject.name.Contains("Mobile"))
+        {
+            parentCanvas.enabled = false;
+        }
+
+        if (interactButton != null) interactButton.gameObject.SetActive(false);
+        if (runButton != null) runButton.gameObject.SetActive(false);
+        if (jumpButton != null) jumpButton.gameObject.SetActive(false);
+        if (joystickBg != null) joystickBg.gameObject.SetActive(false);
+        if (joystickHandle != null) joystickHandle.gameObject.SetActive(false);
     }
 
     private void LateUpdate()

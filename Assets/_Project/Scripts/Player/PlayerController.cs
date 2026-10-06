@@ -264,6 +264,21 @@ public class PlayerController : MonoBehaviour
     public float CurrentSpeed => currentSpeed;
 
     // ───────────────────────────────────────────────
+    // Collision: Chạm vào Robot bị giật điện
+    // ───────────────────────────────────────────────
+    private void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+        if (hit.gameObject.CompareTag("Enemy") || hit.gameObject.name.ToLower().Contains("robot"))
+        {
+            var robot = hit.gameObject.GetComponentInParent<RobotAI>();
+            if (robot != null)
+            {
+                robot.TriggerElectricShock(transform);
+            }
+        }
+    }
+
+    // ───────────────────────────────────────────────
     // Debug Gizmo
     // ───────────────────────────────────────────────
     private void OnDrawGizmosSelected()

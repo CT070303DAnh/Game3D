@@ -54,6 +54,23 @@ public class RobotAI : MonoBehaviour
     [SerializeField] private LayerMask shootObstacleMask;
     private float shootTimer = 0f;
 
+    [Header("Electric Shock On Touch (Màn 1 & Màn 2)")]
+    [Tooltip("Bật cơ chế giật điện khi robot di chuyển chạm vào người chơi")]
+    [SerializeField] private bool enableShockOnTouch = true;
+    [Tooltip("Lượng máu bị mất khi bị giật điện (-5 máu theo yêu cầu)")]
+    [SerializeField] private int shockDamage = 5;
+    [Tooltip("Khoảng cách tiếp xúc kích hoạt điện giật (mét)")]
+    [SerializeField] private float shockTouchDistance = 1.35f;
+    [Tooltip("Thời gian giãn cách giữa các lần giật điện (giây)")]
+    [SerializeField] private float shockCooldown = 1.0f;
+    [SerializeField] private AudioClip shockAudioClip;
+
+    private float lastShockTime = -999f;
+    private Light shockFlashLight;
+    private LineRenderer shockArcLine;
+    private ParticleSystem shockSparkVFX;
+    private static AudioClip proceduralZapClip;
+
     // Components
     private NavMeshAgent agent;
     private RobotDetection detection;
@@ -88,6 +105,7 @@ public class RobotAI : MonoBehaviour
         if (visionCone == null) visionCone = GetComponentInChildren<RobotVisionCone>(true);
         if (sensorLight == null) sensorLight = GetComponentInChildren<Light>(true);
         hasAnimator = animator != null && animator.runtimeAnimatorController != null;
+        EnsureShockComponents();
     }
 
     private void OnEnable()
@@ -113,10 +131,10 @@ public class RobotAI : MonoBehaviour
         }
 
         string sceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-        bool isOutdoorLevel3 = sceneName.Contains("Level3") || sceneName.Contains("Helipad");
+        bool isLabLevel1 = sceneName.Contains("Lab");
 
-        // Ở Màn 1 (Lab) hoặc các màn giải đố cần cấp điện: Robot BẮT BUỘC bất động hoàn toàn, CHỈ thức tỉnh khi lắp cầu chì & bật máy phát điện (PowerRestored)!
-        if (!isOutdoorLevel3)
+        // Ở Màn 1 (Lab): Robot ngủ đông, thức tỉnh sau khi lắp cầu chì & bật máy phát điện (PowerRestored)!
+        if (isLabLevel1)
         {
             if (GameState.Instance != null && GameState.Instance.PowerRestored)
             {
@@ -129,9 +147,11 @@ public class RobotAI : MonoBehaviour
         }
         else
         {
-            // Riêng Màn 3 (Sân đỗ trực thăng): Robot tuần tra kích hoạt ngay từ đầu
+            // Ở Màn 2 (Lò Phản Ứng) và Màn 3 (Sân đỗ trực thăng): Robot tuần tra kích hoạt ngay từ đầu
             ActivateRobot();
         }
+
+        EnsureShockComponents();
     }
 
     private void Update()
@@ -152,6 +172,12 @@ public class RobotAI : MonoBehaviour
             case RobotState.Search:  UpdateSearch();  break;
             case RobotState.Return:  UpdateReturn();  break;
             case RobotState.Attack:  UpdateAttack();  break;
+        }
+
+        // Kiểm tra tiếp xúc chạm giật điện liên tục khi robot đang di chuyển / hoạt động
+        if (enableShockOnTouch && currentState != RobotState.Inactive && playerTransform != null)
+        {
+            CheckTouchShockProximity();
         }
 
         // Cap nhat animator speed
@@ -332,9 +358,20 @@ public class RobotAI : MonoBehaviour
         if (hasAnimator) animator.SetTrigger(HashAttack);
         PlaySound(attackSound);
 
-        PlayerHealth ph = playerTransform.GetComponent<PlayerHealth>();
-        if (ph != null) ph.TakeDamage(attackDamage);
-        Debug.Log("[RobotAI] Attack! Damage: " + attackDamage);
+        string sceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+        bool isLevel1Or2 = sceneName.Contains("Lab") || sceneName.Contains("Level2") || sceneName.Contains("Reactor");
+
+        if (isLevel1Or2)
+        {
+            // Ở Màn 1 & Màn 2: Chạm hoặc tấn công đều giật điện -5 HP
+            TriggerElectricShock(playerTransform);
+        }
+        else
+        {
+            PlayerHealth ph = playerTransform.GetComponent<PlayerHealth>();
+            if (ph != null) ph.TakeDamage(attackDamage);
+            Debug.Log("[RobotAI] Attack! Damage: " + attackDamage);
+        }
     }
 
     public void SetupGun(Transform muzzle, LineRenderer beam, Light flash)
@@ -577,5 +614,322 @@ public class RobotAI : MonoBehaviour
     {
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, attackRange);
+        if (enableShockOnTouch)
+        {
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawWireSphere(transform.position, shockTouchDistance);
+        }
+    }
+
+    // ── ELECTRIC SHOCK ON TOUCH (MÀN 1 & MÀN 2) ──────
+
+    /// <summary>
+    /// Kiểm tra khoảng cách vật lý giữa Robot và Player.
+    /// Kích hoạt giật điện nếu robot di chuyển chạm sát vào người chơi.
+    /// </summary>
+    private void CheckTouchShockProximity()
+    {
+        if (playerTransform == null) return;
+
+        float horizontalDist = Vector2.Distance(
+            new Vector2(transform.position.x, transform.position.z),
+            new Vector2(playerTransform.position.x, playerTransform.position.z)
+        );
+        float heightDiff = Mathf.Abs(transform.position.y - playerTransform.position.y);
+
+        if (horizontalDist <= shockTouchDistance && heightDiff <= 1.8f)
+        {
+            TriggerElectricShock(playerTransform);
+        }
+    }
+
+    /// <summary>
+    /// Kích hoạt giật điện khi robot chạm vào người chơi:
+    /// - Trừ đúng 5 HP máu.
+    /// - Chớp sáng tia sét xanh điện URP.
+    /// - Âm thanh giật điện BZZZT!
+    /// - Thông báo cảnh báo trên HUD.
+    /// - Giật nảy đẩy lùi nhẹ người chơi.
+    /// </summary>
+    public void TriggerElectricShock(Transform target)
+    {
+        if (!enableShockOnTouch || currentState == RobotState.Inactive) return;
+        if (Time.time < lastShockTime + shockCooldown) return;
+
+        if (target == null) target = playerTransform;
+        if (target == null)
+        {
+            var pGO = GameObject.FindGameObjectWithTag("Player");
+            if (pGO != null) target = pGO.transform;
+            else return;
+        }
+
+        PlayerHealth ph = target.GetComponent<PlayerHealth>() ?? target.GetComponentInParent<PlayerHealth>();
+        if (ph == null || ph.IsDead) return;
+
+        lastShockTime = Time.time;
+
+        // 1. Trừ 5 HP máu của Player
+        ph.TakeElectricShock(shockDamage);
+        Debug.Log($"<color=cyan>[RobotAI] ⚡ ĐIỆN GIẬT! Chạm vào Robot: -{shockDamage} HP! Còn {ph.CurrentHealth}/{ph.MaxHealth}</color>");
+
+        // 2. Thông báo trên HUD
+        NotificationUI.ShowMessage($"⚡ CẢNH BÁO: BỊ ROBOT GIẬT ĐIỆN! (-{shockDamage} HP)");
+
+        // 3. Âm thanh giật điện BZZZT!
+        PlayShockAudio();
+
+        // 4. Hiệu ứng hồ quang sét và chớp sáng
+        StartCoroutine(ElectricShockVFXRoutine(target));
+
+        // 5. Lực giật điện đẩy văng nhẹ người chơi lùi ra
+        ApplyShockKnockback(target);
+    }
+
+    private void ApplyShockKnockback(Transform target)
+    {
+        CharacterController cc = target.GetComponent<CharacterController>();
+        if (cc != null)
+        {
+            Vector3 pushDir = (target.position - transform.position);
+            pushDir.y = 0f;
+            if (pushDir.sqrMagnitude < 0.01f) pushDir = -transform.forward;
+            pushDir.Normalize();
+
+            // Đẩy lùi nhẹ 0.85m để người chơi phản xạ giật nảy ra khỏi thân robot
+            cc.Move(pushDir * 0.85f);
+        }
+    }
+
+    private System.Collections.IEnumerator ElectricShockVFXRoutine(Transform target)
+    {
+        Vector3 startPos = transform.position + Vector3.up * 1.1f;
+        Vector3 endPos = target != null ? target.position + Vector3.up * 1.0f : startPos + transform.forward * 1.0f;
+        Vector3 midPos = (startPos + endPos) * 0.5f;
+
+        if (shockFlashLight != null)
+        {
+            shockFlashLight.transform.position = midPos;
+            shockFlashLight.enabled = true;
+        }
+
+        if (shockSparkVFX != null)
+        {
+            shockSparkVFX.transform.position = midPos;
+            shockSparkVFX.Play();
+        }
+
+        if (shockArcLine != null)
+        {
+            shockArcLine.enabled = true;
+            int segments = 6;
+            shockArcLine.positionCount = segments;
+            for (int i = 0; i < segments; i++)
+            {
+                float t = (float)i / (segments - 1);
+                Vector3 p = Vector3.Lerp(startPos, endPos, t);
+                if (i > 0 && i < segments - 1)
+                    p += Random.insideUnitSphere * 0.25f;
+                shockArcLine.SetPosition(i, p);
+            }
+        }
+
+        float duration = 0.2f;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            if (shockArcLine != null && shockArcLine.enabled)
+            {
+                int segments = shockArcLine.positionCount;
+                for (int i = 1; i < segments - 1; i++)
+                {
+                    float t = (float)i / (segments - 1);
+                    Vector3 p = Vector3.Lerp(startPos, endPos, t) + Random.insideUnitSphere * 0.3f;
+                    shockArcLine.SetPosition(i, p);
+                }
+            }
+            yield return null;
+        }
+
+        if (shockArcLine != null) shockArcLine.enabled = false;
+        if (shockFlashLight != null) shockFlashLight.enabled = false;
+    }
+
+    private void PlayShockAudio()
+    {
+        AudioClip clipToPlay = shockAudioClip != null ? shockAudioClip : GetProceduralZapClip();
+        if (clipToPlay != null && audioSource != null)
+        {
+            audioSource.pitch = Random.Range(0.95f, 1.15f);
+            audioSource.PlayOneShot(clipToPlay, 1.0f);
+        }
+    }
+
+    public static AudioClip GetProceduralZapClip()
+    {
+        if (proceduralZapClip != null) return proceduralZapClip;
+
+        int sampleRate = 44100;
+        float duration = 0.28f;
+        int sampleCount = Mathf.FloorToInt(sampleRate * duration);
+        float[] samples = new float[sampleCount];
+
+        System.Random rand = new System.Random(42);
+        for (int i = 0; i < sampleCount; i++)
+        {
+            float t = (float)i / sampleRate;
+            float envelope = Mathf.Exp(-t * 14f);
+            float buzz = Mathf.Sin(2f * Mathf.PI * 120f * t) * 0.45f;
+            float buzz2 = Mathf.Sin(2f * Mathf.PI * 480f * t) * 0.3f;
+            float noise = ((float)rand.NextDouble() * 2f - 1f) * 0.5f;
+            if (rand.NextDouble() > 0.82) noise *= 1.8f;
+
+            samples[i] = Mathf.Clamp((buzz + buzz2 + noise) * envelope * 0.9f, -1f, 1f);
+        }
+
+        proceduralZapClip = AudioClip.Create("ElectricZap_Procedural", sampleCount, 1, sampleRate, false);
+        proceduralZapClip.SetData(samples, 0);
+        return proceduralZapClip;
+    }
+
+    private void EnsureShockComponents()
+    {
+        // 1. Trigger Collider để bắt va chạm tiếp xúc
+        var colliders = GetComponents<Collider>();
+        bool hasTrigger = false;
+        foreach (var col in colliders)
+        {
+            if (col.isTrigger) { hasTrigger = true; break; }
+        }
+        if (!hasTrigger)
+        {
+            var sc = gameObject.AddComponent<SphereCollider>();
+            sc.isTrigger = true;
+            sc.radius = 0.95f;
+            sc.center = new Vector3(0f, 0.9f, 0f);
+        }
+
+        // 2. Rigidbody Kinematic để Unity Physics gửi sự kiện Trigger/Collision
+        var rb = GetComponent<Rigidbody>();
+        if (rb == null)
+        {
+            rb = gameObject.AddComponent<Rigidbody>();
+            rb.isKinematic = true;
+            rb.useGravity = false;
+        }
+
+        // 3. Shock Flash Light
+        Transform flashT = transform.Find("ShockFlashLight");
+        if (flashT == null)
+        {
+            var fGO = new GameObject("ShockFlashLight");
+            fGO.transform.SetParent(transform, false);
+            fGO.transform.localPosition = new Vector3(0f, 1.1f, 0.4f);
+            shockFlashLight = fGO.AddComponent<Light>();
+            shockFlashLight.type = LightType.Point;
+            shockFlashLight.color = new Color(0.2f, 0.85f, 1f);
+            shockFlashLight.range = 5f;
+            shockFlashLight.intensity = 6f;
+            shockFlashLight.enabled = false;
+        }
+        else
+        {
+            shockFlashLight = flashT.GetComponent<Light>();
+        }
+
+        // 4. Shock Arc LineRenderer
+        Transform arcT = transform.Find("ShockArcLine");
+        if (arcT == null)
+        {
+            var aGO = new GameObject("ShockArcLine");
+            aGO.transform.SetParent(transform, false);
+            shockArcLine = aGO.AddComponent<LineRenderer>();
+            shockArcLine.startWidth = 0.08f;
+            shockArcLine.endWidth = 0.04f;
+            shockArcLine.useWorldSpace = true;
+            shockArcLine.positionCount = 6;
+
+            Shader s = Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Sprites/Default");
+            if (s != null)
+            {
+                var mat = new Material(s);
+                mat.color = new Color(0.3f, 0.95f, 1f, 1f);
+                shockArcLine.material = mat;
+            }
+            shockArcLine.startColor = new Color(0.4f, 0.95f, 1f, 1f);
+            shockArcLine.endColor = new Color(0.8f, 1f, 1f, 0.7f);
+            shockArcLine.enabled = false;
+        }
+        else
+        {
+            shockArcLine = arcT.GetComponent<LineRenderer>();
+        }
+
+        // 5. Shock Spark Particle System
+        Transform sparkT = transform.Find("ShockSparks");
+        if (sparkT == null)
+        {
+            var spGO = new GameObject("ShockSparks");
+            spGO.transform.SetParent(transform, false);
+            spGO.transform.localPosition = new Vector3(0f, 1.1f, 0.4f);
+            shockSparkVFX = spGO.AddComponent<ParticleSystem>();
+            var main = shockSparkVFX.main;
+            main.startLifetime = 0.22f;
+            main.startSpeed = 4f;
+            main.startSize = 0.08f;
+            main.startColor = new Color(0.3f, 0.9f, 1f);
+            main.loop = false;
+            main.playOnAwake = false;
+            main.maxParticles = 30;
+
+            var emit = shockSparkVFX.emission;
+            emit.rateOverTime = 0;
+            emit.SetBursts(new ParticleSystem.Burst[] { new ParticleSystem.Burst(0f, 20) });
+
+            var shape = shockSparkVFX.shape;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = 0.2f;
+
+            shockSparkVFX.Stop();
+        }
+        else
+        {
+            shockSparkVFX = sparkT.GetComponent<ParticleSystem>();
+        }
+    }
+
+    private void OnTriggerStay(Collider other)
+    {
+        if (!enableShockOnTouch || currentState == RobotState.Inactive) return;
+        if (other.CompareTag("Player") || other.GetComponentInParent<PlayerHealth>() != null)
+        {
+            Transform t = other.transform;
+            var ph = other.GetComponentInParent<PlayerHealth>();
+            if (ph != null) t = ph.transform;
+            TriggerElectricShock(t);
+        }
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        OnTriggerStay(other);
+    }
+
+    private void OnCollisionStay(Collision collision)
+    {
+        if (!enableShockOnTouch || currentState == RobotState.Inactive) return;
+        if (collision.gameObject.CompareTag("Player") || collision.gameObject.GetComponentInParent<PlayerHealth>() != null)
+        {
+            Transform t = collision.transform;
+            var ph = collision.gameObject.GetComponentInParent<PlayerHealth>();
+            if (ph != null) t = ph.transform;
+            TriggerElectricShock(t);
+        }
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        OnCollisionStay(collision);
     }
 }

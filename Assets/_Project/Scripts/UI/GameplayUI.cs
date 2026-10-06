@@ -94,14 +94,15 @@ public class GameplayUI : MonoBehaviour
         // Dam bao visual thanh mau luon hoat dong dep mat
         EnsureHealthBar();
         EnsureCrosshair();
+        EnsureInventoryUI();
     }
 
     private void Update()
     {
-        // An tam ngam Crosshair khi mo cac menu/modal
+        // An tam ngam Crosshair khi mo cac menu/modal/inventory
         if (crosshairGO != null)
         {
-            bool modalOpen = AccessCodeUI.IsOpen || TerminalUI.IsOpen || ElevatorKeypadUI.IsOpen ||
+            bool modalOpen = AccessCodeUI.IsOpen || TerminalUI.IsOpen || ElevatorKeypadUI.IsOpen || InventoryUI.IsOpen ||
                 (winPanel != null && winPanel.activeSelf) || (gameOverPanel != null && gameOverPanel.activeSelf);
             crosshairGO.SetActive(!modalOpen);
         }
@@ -126,21 +127,31 @@ public class GameplayUI : MonoBehaviour
                 var parentGO = hpBar.transform.parent.gameObject;
                 if (!parentGO.activeSelf) parentGO.SetActive(true);
 
-                // Dieu chinh kich thuoc va kieu dang panel
+                // Dong bo kich thuoc va vi tri HPPanel chuan nhu Man 2
+                var pnlR = parentGO.GetComponent<RectTransform>();
+                if (pnlR != null)
+                {
+                    pnlR.anchorMin = new Vector2(0f, 1f);
+                    pnlR.anchorMax = new Vector2(0f, 1f);
+                    pnlR.pivot = new Vector2(0f, 1f);
+                    pnlR.anchoredPosition = new Vector2(20f, -20f);
+                    pnlR.sizeDelta = new Vector2(290f, 62f);
+                }
+
                 var pnlImg = parentGO.GetComponent<Image>();
                 if (pnlImg != null)
                 {
-                    pnlImg.color = new Color(0.06f, 0.08f, 0.12f, 0.90f);
+                    pnlImg.color = new Color(0.06f, 0.08f, 0.12f, 0.92f);
                 }
             }
 
-            // Kiem tra Background cua Slider
+            // Kiem tra Background cua Slider (mau do tham den nhu Man 2)
             Image bg = hpBar.GetComponent<Image>();
             if (bg == null)
             {
                 bg = hpBar.gameObject.AddComponent<Image>();
             }
-            bg.color = new Color(0.15f, 0.18f, 0.22f, 0.95f);
+            bg.color = new Color(0.18f, 0.08f, 0.08f, 0.95f);
 
             // Kiem tra FillArea & Fill
             Transform fa = hpBar.transform.Find("FillArea") ?? hpBar.transform.Find("Fill Area");
@@ -151,9 +162,18 @@ public class GameplayUI : MonoBehaviour
                 var faR = faGO.AddComponent<RectTransform>();
                 faR.anchorMin = Vector2.zero;
                 faR.anchorMax = Vector2.one;
-                faR.offsetMin = new Vector2(3, 3);
-                faR.offsetMax = new Vector2(-3, -3);
+                faR.offsetMin = new Vector2(2, 2);
+                faR.offsetMax = new Vector2(-2, -2);
                 fa = faGO.transform;
+            }
+            else
+            {
+                var faR = fa.GetComponent<RectTransform>();
+                if (faR != null)
+                {
+                    faR.offsetMin = new Vector2(2, 2);
+                    faR.offsetMax = new Vector2(-2, -2);
+                }
             }
 
             Transform fi = fa.Find("Fill");
@@ -177,16 +197,16 @@ public class GameplayUI : MonoBehaviour
 
             hpBar.fillRect = fi.GetComponent<RectTransform>();
 
-            // Can chinh lai vi tri thanh mau nam gon trong HPPanel
+            // Can chinh lai vi tri thanh mau nam gon trong HPPanel nhu Man 2
             RectTransform slR = hpBar.GetComponent<RectTransform>();
             slR.anchorMin = new Vector2(0f, 0f);
             slR.anchorMax = new Vector2(1f, 0f);
             slR.pivot = new Vector2(0.5f, 0f);
             slR.anchoredPosition = new Vector2(0, 10);
-            slR.sizeDelta = new Vector2(-20, 20);
+            slR.sizeDelta = new Vector2(-24, 20);
         }
 
-        // Kiem tra HPText
+        // Kiem tra HPText chuan font, size, outline nhu Man 2
         if (hpText == null)
         {
             hpText = GetComponentInChildren<Text>(true);
@@ -220,6 +240,14 @@ public class GameplayUI : MonoBehaviour
         {
             UpdateHP(100, 100);
         }
+    }
+
+    public void EnsureInventoryUI()
+    {
+        var inv = GetComponent<InventoryUI>();
+        if (inv == null) inv = FindFirstObjectByType<InventoryUI>();
+        if (inv == null) inv = gameObject.AddComponent<InventoryUI>();
+        inv.EnsureInventoryPanel();
     }
 
     private void EnsureCrosshair()

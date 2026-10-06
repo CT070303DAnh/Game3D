@@ -1,16 +1,25 @@
 #if UNITY_EDITOR
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using System.IO;
 
 /// <summary>
 /// SceneQuickSwitcher: Menu tiện ích cho phép chuyển nhanh giữa các Scene trong Unity Editor,
-/// đồng thời tự động đồng bộ hóa cơ chế Cờ Lê và đồ họa làn hơi nước chân thật cho Màn 2.
+/// đồng thời tự động đồng bộ hóa:
+/// 1. Thanh máu HP chuẩn như Màn 2 (kích thước, vị trí, màu sắc, phông chữ).
+/// 2. Bỏ hoàn toàn hiển thị nút E, RUN, Jump, Joystick ảo trên màn hình như Màn 2.
+/// 3. Phím [TAB] để mở Túi Đồ / Trang Bị đồng bộ trên cả 3 màn.
+/// 4. Cơ chế Cờ Lê & đồ họa làn hơi URP chân thật cho Màn 2.
 /// </summary>
 public static class SceneQuickSwitcher
 {
+    private const string SCENE_LEVEL1 = "Assets/_Project/Scenes/Lab.unity";
     private const string SCENE_LEVEL2 = "Assets/_Project/Scenes/Level2_Reactor.unity";
+    private const string SCENE_LEVEL3 = "Assets/_Project/Scenes/Level3_Helipad.unity";
+    private const string SCENE_MAINMENU = "Assets/_Project/Scenes/MainMenu.unity";
+
     private const string TEXTURE_STEAM = "Assets/_Project/Art/Textures/SteamParticle_Soft.png";
     private const string MAT_STEAM = "Assets/_Project/Art/Materials/M_SteamParticle_URP.mat";
 
@@ -19,7 +28,8 @@ public static class SceneQuickSwitcher
     {
         if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
         {
-            EditorSceneManager.OpenScene("Assets/_Project/Scenes/Lab.unity");
+            EditorSceneManager.OpenScene(SCENE_LEVEL1);
+            SyncCurrentSceneUI();
         }
     }
 
@@ -30,6 +40,7 @@ public static class SceneQuickSwitcher
         {
             EditorSceneManager.OpenScene(SCENE_LEVEL2);
             EnsureLevel2Upgraded(false);
+            SyncCurrentSceneUI();
         }
     }
 
@@ -38,7 +49,8 @@ public static class SceneQuickSwitcher
     {
         if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
         {
-            EditorSceneManager.OpenScene("Assets/_Project/Scenes/Level3_Helipad.unity");
+            EditorSceneManager.OpenScene(SCENE_LEVEL3);
+            SyncCurrentSceneUI();
         }
     }
 
@@ -47,8 +59,14 @@ public static class SceneQuickSwitcher
     {
         if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
         {
-            EditorSceneManager.OpenScene("Assets/_Project/Scenes/MainMenu.unity");
+            EditorSceneManager.OpenScene(SCENE_MAINMENU);
         }
+    }
+
+    [MenuItem("EscapeTheLab/🔄 Đồng Bộ Hóa Cả 3 Màn (Thanh Máu, Bỏ Nút E/Run, Tab Túi Đồ, Robot Giật Điện)", false, 10)]
+    public static void MenuSyncAllScenes()
+    {
+        SyncAllScenes(true);
     }
 
     [MenuItem("EscapeTheLab/🔧 Cập nhật Màn 2 (Cờ Lê & Làn Hơi)", false, 20)]
@@ -62,12 +80,316 @@ public static class SceneQuickSwitcher
     {
         EditorApplication.delayCall += () =>
         {
-            if (SessionState.GetBool("Level2_AutoUpgraded", false)) return;
-            SessionState.SetBool("Level2_AutoUpgraded", true);
-            EnsureLevel2Upgraded(false);
+            if (SessionState.GetBool("AllScenes_AutoSynced_V2", false)) return;
+            SessionState.SetBool("AllScenes_AutoSynced_V2", true);
+            SyncAllScenes(false);
         };
     }
 
+    /// <summary>
+    /// Đồng bộ hóa toàn bộ 3 màn chơi trong một lượt chạy.
+    /// </summary>
+    public static void SyncAllScenes(bool showDialog)
+    {
+        try
+        {
+            if (showDialog) EditorUtility.DisplayProgressBar("Đồng Bộ Hóa Cả 3 Màn", "Đang đồng bộ Màn 1: Phòng Thí Nghiệm...", 0.15f);
+            if (File.Exists(SCENE_LEVEL1))
+            {
+                EditorSceneManager.OpenScene(SCENE_LEVEL1);
+                SyncCurrentSceneUI();
+            }
+
+            if (showDialog) EditorUtility.DisplayProgressBar("Đồng Bộ Hóa Cả 3 Màn", "Đang đồng bộ Màn 2: Lò Phản Ứng...", 0.50f);
+            if (File.Exists(SCENE_LEVEL2))
+            {
+                EditorSceneManager.OpenScene(SCENE_LEVEL2);
+                EnsureLevel2Upgraded(false);
+                SyncCurrentSceneUI();
+            }
+
+            if (showDialog) EditorUtility.DisplayProgressBar("Đồng Bộ Hóa Cả 3 Màn", "Đang đồng bộ Màn 3: Sân Đỗ Trực Thăng...", 0.85f);
+            if (File.Exists(SCENE_LEVEL3))
+            {
+                EditorSceneManager.OpenScene(SCENE_LEVEL3);
+                SyncCurrentSceneUI();
+            }
+
+            AssetDatabase.SaveAssets();
+
+            if (showDialog)
+            {
+                EditorUtility.ClearProgressBar();
+                EditorUtility.DisplayDialog("Thành Công",
+                    "ĐÃ ĐỒNG BỘ HÓA HOÀN TẤT CẢ 3 MÀN CHƠI!\n\n" +
+                    "1. Thanh Máu: Toàn bộ 3 màn đã có thanh máu chuẩn đẹp mắt như Màn 2 (top-left, viền tối, thanh trượt đổi màu xanh/vàng/đỏ).\n" +
+                    "2. Không còn nút E, Run: Đã ẩn toàn bộ các nút bấm cảm ứng ảo (E, Run, Jump, Joystick) trên màn hình để giao diện sạch sẽ và chuyên nghiệp như Màn 2.\n" +
+                    "3. Túi Đồ [TAB]: Phím TAB hoặc I hoạt động đồng bộ trên cả 3 màn, hiển thị đầy đủ vật phẩm từng màn (Thẻ bảo mật, Cờ lê, Cầu chì, Nhiên liệu...).\n" +
+                    "4. Điện Giật -5 Máu (Màn 1 & Màn 2): Robot khi di chuyển chạm vào người chơi sẽ phóng điện giật (-5 HP, tia sét neon, âm thanh BZZT! và đẩy lùi).",
+                    "Tuyệt Vời!");
+            }
+            Debug.Log("<color=green>[SceneQuickSwitcher] ĐÃ ĐỒNG BỘ HÓA HOÀN TẤT CẢ 3 MÀN CHƠI!</color>");
+        }
+        catch (System.Exception ex)
+        {
+            if (showDialog)
+            {
+                EditorUtility.ClearProgressBar();
+                EditorUtility.DisplayDialog("Lỗi", ex.Message, "Đóng");
+            }
+            Debug.LogError("[SceneQuickSwitcher] Lỗi đồng bộ: " + ex);
+        }
+    }
+
+    /// <summary>
+    /// Đồng bộ hóa UI cho Scene hiện đang mở:
+    /// - Thanh máu chuẩn Màn 2
+    /// - Ẩn nút E, Run ảo
+    /// - Tích hợp InventoryUI với phím TAB
+    /// </summary>
+    public static void SyncCurrentSceneUI()
+    {
+        var scene = EditorSceneManager.GetActiveScene();
+        if (scene.name.Contains("MainMenu")) return;
+
+        // 1. Tìm hoặc kiểm tra GameplayCanvas
+        Canvas gameplayCanvas = null;
+        var canvases = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include);
+        foreach (var c in canvases)
+        {
+            if (c.name.Contains("Gameplay") || c.GetComponent<GameplayUI>() != null)
+            {
+                gameplayCanvas = c;
+                break;
+            }
+        }
+
+        if (gameplayCanvas != null)
+        {
+            var gpUI = gameplayCanvas.GetComponent<GameplayUI>();
+            if (gpUI == null) gpUI = gameplayCanvas.gameObject.AddComponent<GameplayUI>();
+
+            // Đồng bộ thanh máu HP chuẩn Màn 2
+            SyncHealthBarVisuals(gameplayCanvas.transform);
+
+            // Đồng bộ Túi Đồ TAB
+            var invUI = gameplayCanvas.GetComponent<InventoryUI>();
+            if (invUI == null) invUI = gameplayCanvas.gameObject.AddComponent<InventoryUI>();
+            invUI.EnsureInventoryPanel();
+
+            EditorUtility.SetDirty(gameplayCanvas.gameObject);
+        }
+
+        // 2. Ẩn hoàn toàn các nút ảo cảm ứng (MobileInputCanvas, InteractButton, RunButton, Joystick)
+        foreach (var c in canvases)
+        {
+            if (c.name.Contains("Mobile") || c.name.Contains("Touch"))
+            {
+                c.enabled = false;
+                c.gameObject.SetActive(false);
+                EditorUtility.SetDirty(c.gameObject);
+            }
+        }
+
+        var mic = Object.FindAnyObjectByType<MobileInputController>(FindObjectsInactive.Include);
+        if (mic != null)
+        {
+            mic.HideOnScreenButtons();
+            EditorUtility.SetDirty(mic.gameObject);
+        }
+
+        // Tìm thêm các nút bấm ảo riêng rẽ nếu còn sót
+        var buttons = Object.FindObjectsByType<Button>(FindObjectsInactive.Include);
+        foreach (var btn in buttons)
+        {
+            string bName = btn.name.ToLower();
+            if (bName.Contains("interactbutton") || bName.Contains("runbutton") || bName.Contains("jumpbutton") || bName.Contains("joystick"))
+            {
+                btn.gameObject.SetActive(false);
+                EditorUtility.SetDirty(btn.gameObject);
+            }
+        }
+
+        // 3. Đồng bộ cơ chế Điện Giật -5 Máu cho Robot AI ở Màn 1 & Màn 2
+        SyncRobotElectricShock();
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+    }
+
+    /// <summary>
+    /// Đồng bộ cấu hình Điện Giật -5 Máu khi chạm vào Robot AI.
+    /// </summary>
+    private static void SyncRobotElectricShock()
+    {
+        var robots = Object.FindObjectsByType<RobotAI>(FindObjectsInactive.Include);
+        foreach (var r in robots)
+        {
+            var so = new SerializedObject(r);
+            var spEnable = so.FindProperty("enableShockOnTouch");
+            var spDmg = so.FindProperty("shockDamage");
+            var spDist = so.FindProperty("shockTouchDistance");
+            var spCd = so.FindProperty("shockCooldown");
+
+            if (spEnable != null) spEnable.boolValue = true;
+            if (spDmg != null) spDmg.intValue = 5;
+            if (spDist != null) spDist.floatValue = 1.35f;
+            if (spCd != null) spCd.floatValue = 1.0f;
+            so.ApplyModifiedProperties();
+
+            // Đảm bảo có Trigger Collider và Kinematic Rigidbody
+            var colliders = r.GetComponents<Collider>();
+            bool hasTrigger = false;
+            foreach (var col in colliders)
+            {
+                if (col.isTrigger) { hasTrigger = true; break; }
+            }
+            if (!hasTrigger)
+            {
+                var sc = r.gameObject.AddComponent<SphereCollider>();
+                sc.isTrigger = true;
+                sc.radius = 0.95f;
+                sc.center = new Vector3(0f, 0.9f, 0f);
+            }
+
+            var rb = r.GetComponent<Rigidbody>();
+            if (rb == null)
+            {
+                rb = r.gameObject.AddComponent<Rigidbody>();
+                rb.isKinematic = true;
+                rb.useGravity = false;
+            }
+
+            EditorUtility.SetDirty(r.gameObject);
+        }
+    }
+
+    /// <summary>
+    /// Đồng bộ kích thước, layout và màu sắc thanh máu chuẩn như Màn 2.
+    /// </summary>
+    private static void SyncHealthBarVisuals(Transform canvasRoot)
+    {
+        // Tìm HPPanel
+        Transform hpPanelTrans = canvasRoot.Find("HPPanel");
+        if (hpPanelTrans == null)
+        {
+            var pnlGO = new GameObject("HPPanel");
+            pnlGO.transform.SetParent(canvasRoot, false);
+            hpPanelTrans = pnlGO.transform;
+        }
+
+        var hpPnl = hpPanelTrans.gameObject;
+        hpPnl.SetActive(true);
+
+        var pnlR = hpPnl.GetComponent<RectTransform>() ?? hpPnl.AddComponent<RectTransform>();
+        pnlR.anchorMin = new Vector2(0f, 1f);
+        pnlR.anchorMax = new Vector2(0f, 1f);
+        pnlR.pivot = new Vector2(0f, 1f);
+        pnlR.anchoredPosition = new Vector2(20f, -20f);
+        pnlR.sizeDelta = new Vector2(290f, 62f);
+
+        var pnlImg = hpPnl.GetComponent<Image>() ?? hpPnl.AddComponent<Image>();
+        pnlImg.color = new Color(0.06f, 0.08f, 0.12f, 0.92f);
+
+        // HPText
+        Transform hpTextTrans = hpPanelTrans.Find("HPText") ?? hpPanelTrans.Find("Text");
+        if (hpTextTrans == null)
+        {
+            var txtGO = new GameObject("HPText");
+            txtGO.transform.SetParent(hpPanelTrans, false);
+            hpTextTrans = txtGO.transform;
+        }
+
+        var txtR = hpTextTrans.GetComponent<RectTransform>() ?? hpTextTrans.gameObject.AddComponent<RectTransform>();
+        txtR.anchorMin = new Vector2(0.5f, 1f);
+        txtR.anchorMax = new Vector2(0.5f, 1f);
+        txtR.pivot = new Vector2(0.5f, 1f);
+        txtR.anchoredPosition = new Vector2(0f, -6f);
+        txtR.sizeDelta = new Vector2(260f, 24f);
+
+        var hpTxt = hpTextTrans.GetComponent<Text>() ?? hpTextTrans.gameObject.AddComponent<Text>();
+        hpTxt.text = "HP: 100 / 100";
+        hpTxt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        hpTxt.fontSize = 15;
+        hpTxt.fontStyle = FontStyle.Bold;
+        hpTxt.alignment = TextAnchor.MiddleCenter;
+        hpTxt.color = Color.white;
+
+        var ol = hpTxt.GetComponent<Outline>() ?? hpTxt.gameObject.AddComponent<Outline>();
+        ol.effectColor = new Color(0, 0, 0, 0.9f);
+        ol.effectDistance = new Vector2(1.5f, -1.5f);
+
+        // HPSlider
+        Transform slTrans = hpPanelTrans.Find("HPSlider") ?? hpPanelTrans.Find("Slider");
+        if (slTrans == null)
+        {
+            var slGO = new GameObject("HPSlider");
+            slGO.transform.SetParent(hpPanelTrans, false);
+            slTrans = slGO.transform;
+        }
+
+        var slR = slTrans.GetComponent<RectTransform>() ?? slTrans.gameObject.AddComponent<RectTransform>();
+        slR.anchorMin = new Vector2(0f, 0f);
+        slR.anchorMax = new Vector2(1f, 0f);
+        slR.pivot = new Vector2(0.5f, 0f);
+        slR.anchoredPosition = new Vector2(0f, 10f);
+        slR.sizeDelta = new Vector2(-24f, 20f);
+
+        var sl = slTrans.GetComponent<Slider>() ?? slTrans.gameObject.AddComponent<Slider>();
+        sl.interactable = false;
+        sl.transition = Selectable.Transition.None;
+
+        var bgImg = slTrans.GetComponent<Image>() ?? slTrans.gameObject.AddComponent<Image>();
+        bgImg.color = new Color(0.18f, 0.08f, 0.08f, 0.95f);
+
+        // FillArea & Fill
+        Transform faTrans = slTrans.Find("FillArea") ?? slTrans.Find("Fill Area");
+        if (faTrans == null)
+        {
+            var faGO = new GameObject("FillArea");
+            faGO.transform.SetParent(slTrans, false);
+            faTrans = faGO.transform;
+        }
+        var faR = faTrans.GetComponent<RectTransform>() ?? faTrans.gameObject.AddComponent<RectTransform>();
+        faR.anchorMin = Vector2.zero;
+        faR.anchorMax = Vector2.one;
+        faR.offsetMin = new Vector2(2f, 2f);
+        faR.offsetMax = new Vector2(-2f, -2f);
+
+        Transform fiTrans = faTrans.Find("Fill");
+        if (fiTrans == null)
+        {
+            var fiGO = new GameObject("Fill");
+            fiGO.transform.SetParent(faTrans, false);
+            fiTrans = fiGO.transform;
+        }
+        var fiR = fiTrans.GetComponent<RectTransform>() ?? fiTrans.gameObject.AddComponent<RectTransform>();
+        fiR.anchorMin = Vector2.zero;
+        fiR.anchorMax = Vector2.one;
+        fiR.offsetMin = Vector2.zero;
+        fiR.offsetMax = Vector2.zero;
+
+        var fiImg = fiTrans.GetComponent<Image>() ?? fiTrans.gameObject.AddComponent<Image>();
+        fiImg.color = new Color(0.2f, 0.9f, 0.35f);
+
+        sl.fillRect = fiR;
+        sl.value = 1f;
+
+        // Cập nhật SerializedObject cho GameplayUI
+        var gpUI = canvasRoot.GetComponent<GameplayUI>();
+        if (gpUI != null)
+        {
+            var so = new SerializedObject(gpUI);
+            so.FindProperty("hpBar").objectReferenceValue = sl;
+            so.FindProperty("hpText").objectReferenceValue = hpTxt;
+            so.FindProperty("hpFillImage").objectReferenceValue = fiImg;
+            so.ApplyModifiedProperties();
+        }
+    }
+
+    /// <summary>
+    /// Nâng cấp Màn 2: Cờ Lê & Làn hơi nước URP.
+    /// </summary>
     public static void EnsureLevel2Upgraded(bool showDialog)
     {
         try

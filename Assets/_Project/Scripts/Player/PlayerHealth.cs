@@ -96,6 +96,12 @@ public class PlayerHealth : MonoBehaviour
             Die();
     }
 
+    /// <summary>Bị điện giật từ Robot (giảm đúng 5 HP và kích hoạt phản hồi sát thương).</summary>
+    public void TakeElectricShock(int amount = 5)
+    {
+        TakeEnvironmentalDamage(amount);
+    }
+
     /// <summary>Hoi phuc HP (battery item).</summary>
     public void Heal(int amount)
     {
