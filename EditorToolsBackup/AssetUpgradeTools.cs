@@ -12,25 +12,12 @@ namespace EscapeTheLab.EditorTools
     {
         private const string PBR_PREFAB_PATH = "Assets/SciFiWarriorPBRHPPolyart/Prefabs/PBRCharacter.prefab";
 
-        [MenuItem("EscapeTheLab/🤖 Nâng Cấp Robot Sang Chiến Binh Sci-Fi PBR 3D", priority = 20)]
-        public static void UpgradeRobotsInCurrentScene()
+        [MenuItem("EscapeTheLab/🤖 1-Click Nâng Cấp Robot Sang Chiến Binh Sci-Fi PBR (Cả 3 Màn & Tự Lưu Scene)", priority = 20)]
+        public static void UpgradeRobotsInAllScenes()
         {
-            // 1. Nâng cấp shader vật liệu sang URP trước để không bị hồng tím
             FixAllShadersToURP();
 
-            // 2. Tải Prefab Robot PBR
-            var robotPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PBR_PREFAB_PATH);
-            if (robotPrefab == null)
-            {
-                // Thử tìm bất kỳ prefab character nào trong SciFiWarrior
-                string[] guids = AssetDatabase.FindAssets("t:Prefab PBRCharacter", new[] { "Assets/SciFiWarriorPBRHPPolyart" });
-                if (guids.Length > 0)
-                {
-                    string path = AssetDatabase.GUIDToAssetPath(guids[0]);
-                    robotPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-                }
-            }
-
+            var robotPrefab = LoadPBRRobotPrefab();
             if (robotPrefab == null)
             {
                 EditorUtility.DisplayDialog("Lỗi", 
@@ -39,41 +26,136 @@ namespace EscapeTheLab.EditorTools
                 return;
             }
 
-            // 3. Tìm tất cả Robot trong Scene
-            var allRobots = Object.FindObjectsByType<RobotAI>(FindObjectsSortMode.None);
-            if (allRobots.Length == 0)
+            string currentScenePath = EditorSceneManager.GetActiveScene().path;
+            int totalUpgraded = 0;
+
+            string[] scenesToUpgrade = {
+                "Assets/_Project/Scenes/Lab.unity",
+                "Assets/_Project/Scenes/Level2_Reactor.unity",
+                "Assets/_Project/Scenes/Level3_Helipad.unity"
+            };
+
+            foreach (var sPath in scenesToUpgrade)
             {
-                // Thử tìm theo tên GameObject
-                var rList = new List<GameObject>();
-                foreach (var name in new[] { "Robot", "Robot_1", "Robot_2" })
-                {
-                    var go = GameObject.Find(name);
-                    if (go != null) rList.Add(go);
-                }
+                if (!System.IO.File.Exists(sPath)) continue;
+                var scene = EditorSceneManager.OpenScene(sPath, OpenSceneMode.Single);
+                int count = UpgradeRobotsInSceneInternal(scene, robotPrefab);
+                totalUpgraded += count;
+            }
 
-                if (rList.Count == 0)
-                {
-                    EditorUtility.DisplayDialog("Thông báo", "Không tìm thấy Robot nào trong Scene hiện tại!", "OK");
-                    return;
-                }
+            if (!string.IsNullOrEmpty(currentScenePath) && System.IO.File.Exists(currentScenePath))
+            {
+                EditorSceneManager.OpenScene(currentScenePath, OpenSceneMode.Single);
+            }
 
-                foreach (var r in rList)
+            AssetDatabase.SaveAssets();
+
+            EditorUtility.DisplayDialog("Hoàn tất vĩnh viễn!",
+                $"Đã nâng cấp tổng cộng {totalUpgraded} Robot trong cả 3 Màn chơi (Lab, Reactor, Helipad) sang mô hình Chiến Binh Sci-Fi PBR 3D sắc nét!\n\n" +
+                "✓ Đã TỰ ĐỘNG LƯU TRỰC TIẾP toàn bộ Scene vào ổ cứng.\n" +
+                "✓ Bạn có thể thoải mái tắt Unity và bật lại mà không bao giờ bị mất mô hình chiến binh!",
+                "Tuyệt vời");
+        }
+
+        [MenuItem("EscapeTheLab/🤖 Nâng Cấp Robot Trong Màn Hiện Tại (Tự Lưu Scene)", priority = 20)]
+        public static void UpgradeRobotsInCurrentScene()
+        {
+            FixAllShadersToURP();
+
+            var robotPrefab = LoadPBRRobotPrefab();
+            if (robotPrefab == null)
+            {
+                EditorUtility.DisplayDialog("Lỗi", 
+                    "Không tìm thấy Prefab PBRCharacter tại 'Assets/SciFiWarriorPBRHPPolyart/Prefabs/PBRCharacter.prefab'!\nHãy kiểm tra xem gói đã được import chưa.", 
+                    "OK");
+                return;
+            }
+
+            var activeScene = EditorSceneManager.GetActiveScene();
+            int count = UpgradeRobotsInSceneInternal(activeScene, robotPrefab);
+
+            AssetDatabase.SaveAssets();
+
+            EditorUtility.DisplayDialog("Hoàn tất!", 
+                $"Đã nâng cấp {count} Robot trong Scene '{activeScene.name}' sang mô hình 3D Sci-Fi Warrior PBR chất lượng cao!\n\n" +
+                "✓ Scene đã được TỰ ĐỘNG LƯU VĨNH VIỄN vào ổ cứng.\n" +
+                "✓ Bạn có thể yên tâm tắt Unity và mở lại mà không sợ mất thay đổi.", 
+                "Tuyệt vời");
+        }
+
+        public static GameObject LoadPBRRobotPrefab()
+        {
+            var robotPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PBR_PREFAB_PATH);
+            if (robotPrefab == null)
+            {
+                string[] guids = AssetDatabase.FindAssets("t:Prefab PBRCharacter", new[] { "Assets/SciFiWarriorPBRHPPolyart" });
+                if (guids.Length > 0)
                 {
-                    ApplyPBRModelToRobot(r, robotPrefab);
+                    string path = AssetDatabase.GUIDToAssetPath(guids[0]);
+                    robotPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
                 }
             }
-            else
+            return robotPrefab;
+        }
+
+        public static int UpgradeRobotsInSceneInternal(Scene scene, GameObject robotPrefab = null)
+        {
+            if (!scene.isLoaded) return 0;
+            if (robotPrefab == null) robotPrefab = LoadPBRRobotPrefab();
+            if (robotPrefab == null) return 0;
+
+            int upgradedCount = 0;
+
+            // 1. Tìm tất cả RobotAI (kể cả inactive)
+            var allRobots = Object.FindObjectsByType<RobotAI>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var robotList = new List<GameObject>();
+
+            if (allRobots != null && allRobots.Length > 0)
             {
                 foreach (var ai in allRobots)
                 {
-                    ApplyPBRModelToRobot(ai.gameObject, robotPrefab);
+                    if (ai != null && ai.gameObject != null && ai.gameObject.scene == scene)
+                    {
+                        if (!robotList.Contains(ai.gameObject))
+                            robotList.Add(ai.gameObject);
+                    }
                 }
             }
 
-            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene());
-            EditorUtility.DisplayDialog("Hoàn tất!", 
-                $"Đã nâng cấp thành công Robot trong Scene sang mô hình 3D Sci-Fi Warrior PBR chất lượng cao!\n\nNhớ nhấn Ctrl + S để lưu Scene.", 
-                "Tuyệt vời");
+            // 2. Tìm thêm theo tên nếu RobotAI chưa được gán
+            foreach (var name in new[] { "Robot", "Robot_1", "Robot_2" })
+            {
+                var rootObjs = scene.GetRootGameObjects();
+                foreach (var root in rootObjs)
+                {
+                    if (root.name == name && !robotList.Contains(root))
+                        robotList.Add(root);
+
+                    foreach (var tr in root.GetComponentsInChildren<Transform>(true))
+                    {
+                        if (tr.name == name && !robotList.Contains(tr.gameObject))
+                            robotList.Add(tr.gameObject);
+                    }
+                }
+            }
+
+            foreach (var r in robotList)
+            {
+                if (r != null)
+                {
+                    ApplyPBRModelToRobot(r, robotPrefab);
+                    upgradedCount++;
+                }
+            }
+
+            if (upgradedCount > 0)
+            {
+                EditorSceneManager.MarkSceneDirty(scene);
+                EditorSceneManager.SaveScene(scene);
+                Debug.Log($"[AssetUpgradeTools] 💾 Đã lưu Scene '{scene.name}' với {upgradedCount} Robot PBR!");
+            }
+
+            return upgradedCount;
         }
 
         [MenuItem("EscapeTheLab/🚁 1-Click Nâng Cấp Trực Thăng 3D Quân Sự (OH-58D Kiowa)", priority = 21)]
@@ -249,7 +331,10 @@ namespace EscapeTheLab.EditorTools
                 sign.localPosition = new Vector3(0, 0.45f, 5.8f);
             }
 
-            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene());
+            var activeScene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
+            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(activeScene);
+            UnityEditor.SceneManagement.EditorSceneManager.SaveScene(activeScene);
+            AssetDatabase.SaveAssets();
 
             EditorUtility.DisplayDialog("Thành công!", 
                 "Đã nâng cấp trực thăng cứu hộ sang mô hình 3D quân sự OH-58D Kiowa to lớn & sạch sẽ!\n\n" +
@@ -258,7 +343,7 @@ namespace EscapeTheLab.EditorTools
                 "• Càng đáp tiếp đất hoàn hảo trên sân bay Helipad\n" +
                 "• Nâng cấp vật liệu URP Lit sắc nét\n" +
                 "• Đã kết nối âm thanh Helicopter.wav và cơ chế cất cánh tẩu thoát\n\n" +
-                "Nhớ nhấn Ctrl + S để lưu Scene lại!", 
+                "Scene đã được TỰ ĐỘNG LƯU VĨNH VIỄN vào ổ cứng!", 
                 "Tuyệt vời");
         }
 
@@ -294,6 +379,14 @@ namespace EscapeTheLab.EditorTools
             modelInstance.transform.localPosition = new Vector3(0, -1.0f, 0); // Đưa chân chạm đất (Capsule cao 2m, tâm ở 0)
             modelInstance.transform.localRotation = Quaternion.identity;
             modelInstance.transform.localScale = Vector3.one;
+
+            // Unpack prefab instance để nó trở thành một phần cố định của scene, tránh bị Unity revert khi restart
+            if (PrefabUtility.IsPartOfPrefabInstance(modelInstance))
+            {
+                PrefabUtility.UnpackPrefabInstance(modelInstance, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+            }
+            EditorUtility.SetDirty(robot);
+            EditorUtility.SetDirty(modelInstance);
 
             // Xóa AudioListener trên model nếu có (tránh lỗi duplicate audio listener)
             var listeners = modelInstance.GetComponentsInChildren<AudioListener>(true);
@@ -1073,6 +1166,7 @@ namespace EscapeTheLab.EditorTools
             int wallCount = ApplyP3DWallTexturesToScene(labScene);
             int propCount = DecorateLabWithSciFiPropsInternal(labScene);
             RestoreAndFixLabColorPuzzleInternal(labScene);
+            UpgradeRobotsInSceneInternal(labScene);
 
             EditorSceneManager.MarkSceneDirty(labScene);
             EditorSceneManager.SaveScene(labScene);
@@ -1127,6 +1221,7 @@ namespace EscapeTheLab.EditorTools
 
             int wallCount = ApplyP3DWallTexturesToScene(reactorScene);
             int propCount = DecorateReactorWithSciFiPropsInternal(reactorScene);
+            UpgradeRobotsInSceneInternal(reactorScene);
 
             EditorSceneManager.MarkSceneDirty(reactorScene);
             EditorSceneManager.SaveScene(reactorScene);
@@ -1161,6 +1256,7 @@ namespace EscapeTheLab.EditorTools
             int w1 = ApplyP3DWallTexturesToScene(sc1);
             int p1 = DecorateLabWithSciFiPropsInternal(sc1);
             RestoreAndFixLabColorPuzzleInternal(sc1);
+            UpgradeRobotsInSceneInternal(sc1);
             BrightenSceneLighting(sc1);
             EditorSceneManager.MarkSceneDirty(sc1);
             EditorSceneManager.SaveScene(sc1);
@@ -1169,6 +1265,7 @@ namespace EscapeTheLab.EditorTools
             var sc2 = EditorSceneManager.OpenScene("Assets/_Project/Scenes/Level2_Reactor.unity", OpenSceneMode.Single);
             int w2 = ApplyP3DWallTexturesToScene(sc2);
             int p2 = DecorateReactorWithSciFiPropsInternal(sc2);
+            UpgradeRobotsInSceneInternal(sc2);
             BrightenSceneLighting(sc2);
             EditorSceneManager.MarkSceneDirty(sc2);
             EditorSceneManager.SaveScene(sc2);
@@ -1177,6 +1274,7 @@ namespace EscapeTheLab.EditorTools
             if (System.IO.File.Exists("Assets/_Project/Scenes/Level3_Helipad.unity"))
             {
                 var sc3 = EditorSceneManager.OpenScene("Assets/_Project/Scenes/Level3_Helipad.unity", OpenSceneMode.Single);
+                UpgradeRobotsInSceneInternal(sc3);
                 BrightenSceneLighting(sc3);
                 EditorSceneManager.MarkSceneDirty(sc3);
                 EditorSceneManager.SaveScene(sc3);
@@ -1471,6 +1569,17 @@ namespace EscapeTheLab.EditorTools
                 {
                     Debug.Log("[AssetUpgradeTools] 🔐 Tự động khôi phục và nâng cấp nhiệm vụ mã màu Màn 1...");
                     RestoreAndFixLabColorPuzzleMenu();
+                };
+            }
+
+            string flagRobot = "Temp/RunRobotUpgradeAll.flag";
+            if (System.IO.File.Exists(flagRobot))
+            {
+                try { System.IO.File.Delete(flagRobot); } catch {}
+                EditorApplication.delayCall += () =>
+                {
+                    Debug.Log("[AssetUpgradeTools] 🤖 Tự động nâng cấp Robot thành Chiến Binh PBR cả 3 màn...");
+                    UpgradeRobotsInAllScenes();
                 };
             }
         }
