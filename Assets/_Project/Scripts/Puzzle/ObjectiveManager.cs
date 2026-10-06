@@ -74,10 +74,10 @@ public class ObjectiveManager : MonoBehaviour
         }
         else if (sceneName.Contains("Level3") || sceneName.Contains("Helipad"))
         {
-            objectives.Add(new Objective("fuel", "Tìm Bình Nhiên Liệu Trực Thăng"));
-            objectives.Add(new Objective("radar", "Kích Hoạt Trạm Radar"));
-            objectives.Add(new Objective("dome_gate", "Mở Cổng Vòm Sân Đỗ"));
-            objectives.Add(new Objective("helipad_escape", "Lên Trực Thăng Thoát Hiểm!"));
+            objectives.Add(new Objective("fuel", "Tìm Bình Nhiên Liệu Tại Kho Tiếp Liệu (Phía Tây)"));
+            objectives.Add(new Objective("radar", "Kích Hoạt Trạm Radar Trên Tháp Điều Khiển (Phía Đông)"));
+            objectives.Add(new Objective("climb_stairs", "Leo Cầu Thang Lên Nóc Nhà Sân Đỗ"));
+            objectives.Add(new Objective("helipad_escape", "Tiếp Nhiên Liệu & Lên Trực Thăng Tẩu Thoát! [E]"));
         }
         else
         {

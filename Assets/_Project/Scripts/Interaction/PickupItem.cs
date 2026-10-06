@@ -56,6 +56,15 @@ public class PickupItem : MonoBehaviour, IInteractable
         transform.Rotate(Vector3.up, rotateSpeed * Time.deltaTime, Space.World);
     }
 
+    private void OnTriggerEnter(Collider other)
+    {
+        if (collected) return;
+        if (other.CompareTag("Player") || other.GetComponent<PlayerHealth>() != null || other.GetComponent<CharacterController>() != null)
+        {
+            Interact();
+        }
+    }
+
     public void Interact()
     {
         if (collected) return;

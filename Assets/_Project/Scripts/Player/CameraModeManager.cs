@@ -172,12 +172,8 @@ public class CameraModeManager : MonoBehaviour
             }
         }
 
-        // 5. Cap nhat cameraTransform tren PlayerController
-        var pc = player.GetComponent<PlayerController>();
-        if (pc != null)
-        {
-            pc.SendMessage("Start", SendMessageOptions.DontRequireReceiver);
-        }
+        // 5. PlayerController dung Camera.main -> khong can goi lai Start
+        //    (SendMessage("Start") truoc day gay de quy vo han -> StackOverflow)
 
         NotificationUI.ShowMessage("CHẾ ĐỘ: GÓC NHÌN THỨ NHẤT (FPS) [Bấm V để đổi]");
         Debug.Log("[CameraModeManager] Switched to FIRST PERSON mode.");
@@ -223,12 +219,7 @@ public class CameraModeManager : MonoBehaviour
             }
         }
 
-        // 5. Cap nhat PlayerController
-        var pc = player.GetComponent<PlayerController>();
-        if (pc != null)
-        {
-            pc.SendMessage("Start", SendMessageOptions.DontRequireReceiver);
-        }
+        // 5. PlayerController dung Camera.main -> khong can goi lai Start
 
         NotificationUI.ShowMessage("CHẾ ĐỘ: GÓC NHÌN THỨ BA (PUBG TPS) [Bấm V để đổi]");
         Debug.Log("[CameraModeManager] Switched to THIRD PERSON PUBG mode.");

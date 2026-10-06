@@ -87,11 +87,17 @@ public class ReactorEnvironmentBuilder : Editor
             EditorUtility.DisplayProgressBar("Xây dựng Màn 2", "Thiết lập UI Canvas & Bàn phím Thang máy...", 0.92f);
             SetupCanvasUI(envRoot.transform);
 
+            EditorUtility.DisplayProgressBar("Xây dựng Màn 2", "Trang hoàng nội thất Sci-Fi Props...", 0.94f);
+            EscapeTheLab.EditorTools.AssetUpgradeTools.DecorateReactorWithSciFiPropsInternal(EditorSceneManager.GetActiveScene());
+
             EditorUtility.DisplayProgressBar("Xây dựng Màn 2", "Bake NavMesh cho AI...", 0.96f);
             BakeNavMesh(envRoot);
 
             EditorUtility.DisplayProgressBar("Xây dựng Màn 2", "Cập nhật Build Settings...", 0.98f);
             UpdateBuildSettings();
+
+            EditorUtility.DisplayProgressBar("Xây dựng Màn 2", "Nâng cấp texture tường P3D Outdoor Wall Tile...", 0.99f);
+            EscapeTheLab.EditorTools.AssetUpgradeTools.ApplyP3DWallTexturesToScene(EditorSceneManager.GetActiveScene());
 
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
             EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());
@@ -815,26 +821,7 @@ public class ReactorEnvironmentBuilder : Editor
     // ─── 8. ÁNH SÁNG CÔNG NGHIỆP (LIGHTING) ───────────────────────────
     private static void SetupLighting(Transform parent)
     {
-        RenderSettings.ambientMode  = UnityEngine.Rendering.AmbientMode.Flat;
-        RenderSettings.ambientLight = new Color(0.18f, 0.16f, 0.15f);
-
-        var lRoot = new GameObject("Lights");
-        lRoot.transform.SetParent(parent);
-
-        // Sanh Lo Phan Ung: Anh sang cam / ho phach
-        MakeLight(lRoot.transform, new Vector3(-6, 4.5f, -6), new Color(1f, 0.6f, 0.2f), 9f, 16f);
-        MakeLight(lRoot.transform, new Vector3( 6, 4.5f, -6), new Color(1f, 0.6f, 0.2f), 9f, 16f);
-        MakeLight(lRoot.transform, new Vector3(-6, 4.5f,  6), new Color(1f, 0.6f, 0.2f), 9f, 16f);
-        MakeLight(lRoot.transform, new Vector3( 6, 4.5f,  6), new Color(1f, 0.6f, 0.2f), 9f, 16f);
-
-        // Phong Noi Hoi: Anh sang do vang
-        MakeLight(lRoot.transform, new Vector3(-26, 4.5f, 0), new Color(1f, 0.45f, 0.15f), 11f, 18f);
-
-        // Phong May Phat: Anh sang xanh cong nghiep
-        MakeLight(lRoot.transform, new Vector3(26, 4.5f, 0), new Color(0.3f, 0.7f, 1f), 11f, 18f);
-
-        // Kho Hang & Thang May: Anh sang trang am
-        MakeLight(lRoot.transform, new Vector3(0, 4.5f, 24), new Color(0.9f, 0.88f, 0.82f), 12f, 20f);
+        EscapeTheLab.EditorTools.AssetUpgradeTools.BrightenReactorLightingInternal(EditorSceneManager.GetActiveScene());
     }
 
     private static void MakeLight(Transform parent, Vector3 pos, Color col, float intensity, float range)
@@ -962,12 +949,20 @@ public class ReactorEnvironmentBuilder : Editor
 
         var sensor = new GameObject("SensorLight");
         sensor.transform.SetParent(robot.transform);
-        sensor.transform.localPosition = new Vector3(0, 1.6f, 0.4f);
+        sensor.transform.localPosition = new Vector3(0, 1.5f, 0.4f);
+        sensor.transform.localRotation = Quaternion.Euler(20f, 0, 0);
         var sl = sensor.AddComponent<Light>();
         sl.type = LightType.Spot;
-        sl.color = Color.red;
-        sl.range = 10f;
-        sl.spotAngle = 60f;
+        sl.color = Color.green;
+        sl.intensity = 4.5f;
+        sl.range = 14f;
+        sl.spotAngle = 70f;
+
+        var coneGO = new GameObject("VisionCone_RadarSweep");
+        coneGO.transform.SetParent(robot.transform, false);
+        coneGO.transform.localPosition = Vector3.zero;
+        coneGO.transform.localRotation = Quaternion.identity;
+        var rvc = coneGO.AddComponent<RobotVisionCone>();
 
         // Waypoints tuan tra
         var wpRoot = new GameObject("Waypoints");
@@ -991,6 +986,7 @@ public class ReactorEnvironmentBuilder : Editor
         var ai = robot.GetComponent<RobotAI>() ?? robot.AddComponent<RobotAI>();
         var soAI = new SerializedObject(ai);
         soAI.FindProperty("sensorLight").objectReferenceValue = sl;
+        soAI.FindProperty("visionCone").objectReferenceValue = rvc;
         var wpProp = soAI.FindProperty("waypoints");
         wpProp.arraySize = wps.Length;
         for (int i = 0; i < wps.Length; i++)

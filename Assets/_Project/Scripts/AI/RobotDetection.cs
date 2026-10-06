@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 /// <summary>
 /// RobotDetection: Xu ly phat hien Player.
@@ -58,15 +58,22 @@ public class RobotDetection : MonoBehaviour
             return false;
         }
 
-        // 3. Line of Sight (Raycast)
-        if (Physics.Raycast(eye, dirToPlayer, out RaycastHit hit, detectionRange, obstacleMask | playerMask))
+        // 3. Line of Sight (Raycast) - nhan dien player theo Tag/Hierarchy (khong phu thuoc Layer)
+        Vector3 target = player.position + Vector3.up * 1.0f;
+        Vector3 losDir = (target - eye).normalized;
+        float losDist = Vector3.Distance(eye, target);
+        int mask = (obstacleMask.value | playerMask.value | (1 << player.gameObject.layer));
+        if (mask == 0) mask = ~0;
+        RaycastHit[] hits = Physics.RaycastAll(eye, losDir, losDist, mask, QueryTriggerInteraction.Ignore);
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+        foreach (var hit in hits)
         {
-            if (((1 << hit.collider.gameObject.layer) & playerMask) == 0)
-            {
-                // Bi chan boi obstacle
-                ResetTimer();
-                return false;
-            }
+            Transform t = hit.collider.transform;
+            if (t == transform || t.IsChildOf(transform)) continue; // bo qua chinh robot
+            if (t == player || t.IsChildOf(player) || hit.collider.CompareTag("Player")) break; // thay player
+            // Bi chan boi vat can
+            ResetTimer();
+            return false;
         }
 
         // Thay player

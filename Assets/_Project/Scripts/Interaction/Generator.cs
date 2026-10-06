@@ -35,10 +35,10 @@ public class Generator : MonoBehaviour, IInteractable
     {
         get
         {
-            if (state == GeneratorState.On) return "Máy phát điện: ĐANG HOẠT ĐỘNG";
+            if (state == GeneratorState.On) return "Máy Phát Điện [ĐÃ KHÔI PHỤC ĐIỆN]";
             if (GameState.Instance != null && !GameState.Instance.FuseCollected)
-                return "Cần tìm cầu chì";
-            return "Lắp cầu chì vào";
+                return "Máy Phát Điện (Cần Cầu Chì - Fuse) [E]";
+            return "Lắp Cầu Chì & Khởi Động Máy Phát Điện [E]";
         }
     }
 
@@ -61,7 +61,7 @@ public class Generator : MonoBehaviour, IInteractable
 
         if (GameState.Instance == null || !GameState.Instance.FuseCollected)
         {
-            NotificationUI.ShowMessage("Bạn cần có cầu chì để khởi động máy phát điện.");
+            NotificationUI.ShowMessage("CẢNH BÁO: Máy phát điện bị thiếu CẦU CHÌ! Hãy tìm Cầu Chì trong phòng kho để lắp vào.");
             return;
         }
 
@@ -72,14 +72,14 @@ public class Generator : MonoBehaviour, IInteractable
     {
         // Phase 1: Insert fuse
         state = GeneratorState.InsertingFuse;
-        NotificationUI.ShowMessage("Đang lắp cầu chì...");
+        NotificationUI.ShowMessage("Đang lắp Cầu Chì vào máy phát điện...");
         PlaySound(insertFuseSound);
         if (electricSparks != null) electricSparks.Play();
         yield return new WaitForSeconds(1f);
 
         // Phase 2: Starting
         state = GeneratorState.Starting;
-        NotificationUI.ShowMessage("Máy phát điện đang khởi động...");
+        NotificationUI.ShowMessage("Máy phát điện đang nổ máy...");
         PlaySound(startupSound);
         yield return new WaitForSeconds(startupDuration);
 
@@ -108,7 +108,7 @@ public class Generator : MonoBehaviour, IInteractable
         if (GameState.Instance != null)
             GameState.Instance.SetPowerRestored();
 
-        NotificationUI.ShowMessage("ĐIỆN ĐÃ KHÔI PHỤC!");
+        NotificationUI.ShowMessage("⚡ ĐÃ LẮP CẦU CHÌ & BẬT ĐIỆN! CẢNH BÁO: ROBOT AN NINH ĐÃ THỨC TỈNH!");
         Debug.Log("[Generator] Power restored!");
     }
 

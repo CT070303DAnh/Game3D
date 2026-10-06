@@ -80,8 +80,14 @@ public class LabEnvironmentBuilder : Editor
             EditorUtility.DisplayProgressBar("Building Lab", "Repositioning objects...", 0.75f);
             RepositionItems();
 
+            EditorUtility.DisplayProgressBar("Building Lab", "Decorating with Sci-Fi Props...", 0.82f);
+            EscapeTheLab.EditorTools.AssetUpgradeTools.DecorateLabWithSciFiPropsInternal(EditorSceneManager.GetActiveScene());
+
             EditorUtility.DisplayProgressBar("Building Lab", "Baking NavMesh...", 0.88f);
             BakeNavMeshNow(envRoot);
+
+            EditorUtility.DisplayProgressBar("Building Lab", "Applying P3D Wall Textures...", 0.95f);
+            EscapeTheLab.EditorTools.AssetUpgradeTools.ApplyP3DWallTexturesToScene(EditorSceneManager.GetActiveScene());
 
             EditorUtility.DisplayProgressBar("Building Lab", "Saving scene...", 0.97f);
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
@@ -109,11 +115,11 @@ public class LabEnvironmentBuilder : Editor
         var old = GameObject.Find("=== LAB ENVIRONMENT ===");
         if (old != null) DestroyImmediate(old);
 
-        // Tát directional light xuống thấp
+        // Dieu chinh directional light tan xa hai hoa
         var lights = Object.FindObjectsByType<Light>(FindObjectsSortMode.None);
         foreach (var l in lights)
             if (l.type == LightType.Directional)
-            { l.intensity = 0.05f; l.color = new Color(0.08f, 0.08f, 0.12f); }
+            { l.intensity = 0.85f; l.color = new Color(0.92f, 0.95f, 1.0f); }
     }
 
     // ─── BUILD ROOM ──────────────────────────────────────────────────────────
@@ -279,43 +285,7 @@ public class LabEnvironmentBuilder : Editor
     // ─── LIGHTING ────────────────────────────────────────────────────────────
     static void SetupLighting(Transform parent)
     {
-        var lRoot = new GameObject("Lighting"); lRoot.transform.SetParent(parent);
-
-        RenderSettings.ambientMode  = UnityEngine.Rendering.AmbientMode.Flat;
-        RenderSettings.ambientLight = new Color(0.15f, 0.15f, 0.18f);
-
-        // Sanh chinh - trang xanh (Giam so luong de tranh vuot qua limit 4 den cua URP)
-        foreach (var p in new[] {
-            new Vector3(-6,4.6f,-6), new Vector3(6,4.6f,-6),
-            new Vector3(-6,4.6f, 6), new Vector3(6,4.6f, 6),
-        }) MakeLight(lRoot.transform, p, new Color(0.7f,0.9f,1f), 15f, 25f);
-
-        // Phong A xanh la
-        foreach (var p in new[] {
-            new Vector3(-16,4.6f,4), new Vector3(-16,4.6f,-4)
-        }) MakeLight(lRoot.transform, p, new Color(0.5f,1f,0.55f), 12f, 18f);
-
-        // Phong B xanh duong
-        foreach (var p in new[] {
-            new Vector3(16,4.6f,4), new Vector3(16,4.6f,-4)
-        }) MakeLight(lRoot.transform, p, new Color(0.4f,0.7f,1f), 12f, 18f);
-
-        // Phong C - do cam EXIT
-        MakeLight(lRoot.transform, new Vector3(0,4.6f,20), new Color(1f,0.3f,0.15f), 15f, 20f);
-
-        // Hanh lang
-        MakeLight(lRoot.transform, new Vector3(-8,4.6f,4),  new Color(0.6f,0.9f,1f), 7f, 6f);
-        MakeLight(lRoot.transform, new Vector3( 8,4.6f,4),  new Color(0.6f,0.9f,1f), 7f, 6f);
-        MakeLight(lRoot.transform, new Vector3( 0,4.6f,13), new Color(0.6f,0.9f,1f), 7f, 6f);
-
-        // EXIT sign
-        MakeExitSign(lRoot.transform, new Vector3(0, 3.8f, 24.5f));
-
-        // Alert light (tat - robot se bat)
-        var alertGO = new GameObject("RobotAlertLight"); alertGO.transform.SetParent(lRoot.transform);
-        alertGO.transform.position = new Vector3(0, 4.8f, 0);
-        var al = alertGO.AddComponent<Light>();
-        al.type = LightType.Point; al.color = Color.red; al.intensity = 0f; al.range = 30f;
+        EscapeTheLab.EditorTools.AssetUpgradeTools.BrightenLabLightingInternal(EditorSceneManager.GetActiveScene());
     }
 
     static void MakeLight(Transform parent, Vector3 pos, Color col, float intensity, float range)

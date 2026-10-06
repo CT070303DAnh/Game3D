@@ -23,6 +23,7 @@ public class HelicopterController : MonoBehaviour, IInteractable
     [SerializeField] private float liftOffHeight = 35f;
 
     [Header("State")]
+    [SerializeField] private bool requireFuelAndRadar = true;
     [SerializeField] private bool isFueled = false;
     private bool isEscaping = false;
     private float currentRotorSpeed = 0f;
@@ -34,14 +35,17 @@ public class HelicopterController : MonoBehaviour, IInteractable
         get
         {
             if (isEscaping) return "Trực thăng đang cất cánh...";
-            if (!isFueled)
+            if (requireFuelAndRadar)
             {
-                bool hasFuel = GameState.Instance != null && GameState.Instance.JetFuelCollected;
-                return hasFuel ? "Nạp Nhiên Liệu Phản Lực Cho Trực Thăng [E]" : "Trực Thăng Thoát Hiểm (Cần Nhiên Liệu) [E]";
+                if (!isFueled)
+                {
+                    bool hasFuel = GameState.Instance != null && GameState.Instance.JetFuelCollected;
+                    return hasFuel ? "Nạp Nhiên Liệu Cho Trực Thăng [E]" : "Trực Thăng (Cần Bình Nhiên Liệu Tại Kho Tiếp Liệu) [E]";
+                }
+                if (GameState.Instance == null || !GameState.Instance.RadarActivated)
+                    return "Trực Thăng (Chưa có tín hiệu Radar dẫn đường từ Tháp Điều Khiển) [E]";
             }
-            if (GameState.Instance == null || !GameState.Instance.RadarActivated)
-                return "Trực Thăng (Chưa có tín hiệu Radar dẫn đường) [E]";
-            return "LÊN TRỰC THĂNG & THOÁT HIỂM! [E]";
+            return "LÊN TRỰC THĂNG & TẨU THOÁT! [E]";
         }
     }
 
@@ -56,6 +60,17 @@ public class HelicopterController : MonoBehaviour, IInteractable
             var bc = gameObject.AddComponent<BoxCollider>();
             bc.size = new Vector3(5f, 3.5f, 9f);
             bc.isTrigger = true;
+        }
+
+        if (!requireFuelAndRadar)
+        {
+            isFueled = true;
+            currentRotorSpeed = idleRotorSpeed;
+        }
+        else
+        {
+            isFueled = false;
+            currentRotorSpeed = 0f;
         }
     }
 
@@ -83,32 +98,40 @@ public class HelicopterController : MonoBehaviour, IInteractable
     {
         if (isEscaping) return;
 
-        // 1. Kiem tra nhien lieu
-        if (!isFueled)
+        if (requireFuelAndRadar)
         {
-            bool hasFuel = GameState.Instance != null && GameState.Instance.JetFuelCollected;
-            if (!hasFuel)
+            // 1. Kiem tra nhien lieu
+            if (!isFueled)
             {
-                NotificationUI.ShowMessage("CẢNH BÁO: Trực thăng hết sạch nhiên liệu! Hãy tìm BÌNH NHIÊN LIỆU (Jet Fuel) tại Kho Tiếp Liệu.");
+                bool hasFuel = GameState.Instance != null && GameState.Instance.JetFuelCollected;
+                if (!hasFuel)
+                {
+                    NotificationUI.ShowMessage("CẢNH BÁO: Trực thăng chưa có nhiên liệu! Hãy qua KHO TIẾP LIỆU (phía Tây) để lấy Bình Nhiên Liệu.");
+                    return;
+                }
+
+                // Nap nhien lieu
+                isFueled = true;
+                currentRotorSpeed = idleRotorSpeed;
+                NotificationUI.ShowMessage("✓ ĐÃ TIẾP NHIÊN LIỆU PHẢN LỰC CHO TRỰC THĂNG! Động cơ nổ máy chờ lệnh.");
+                ObjectiveManager.Instance?.CompleteObjective("fuel");
+
+                if (GameState.Instance == null || !GameState.Instance.RadarActivated)
+                {
+                    NotificationUI.ShowMessage("✓ ĐÃ NẠP XĂNG! Tiếp theo: Hãy qua THÁP ĐIỀU KHIỂN (phía Đông) kích hoạt trạm Radar không lưu.");
+                }
                 return;
             }
 
-            // Nap nhien lieu
-            isFueled = true;
-            currentRotorSpeed = idleRotorSpeed;
-            NotificationUI.ShowMessage("✓ ĐÃ TIẾP NHIÊN LIỆU CHO TRỰC THĂNG (100%)! Động cơ đã nổ máy chờ lệnh.");
-            ObjectiveManager.Instance?.CompleteObjective("fuel");
-            return;
+            // 2. Kiem tra Radar
+            if (GameState.Instance == null || !GameState.Instance.RadarActivated)
+            {
+                NotificationUI.ShowMessage("CẢNH BÁO: Không lưu chưa mở khóa! Hãy lên THÁP ĐIỀU KHIỂN (phía Đông) để Bật Trạm Radar.");
+                return;
+            }
         }
 
-        // 2. Kiem tra Radar
-        if (GameState.Instance == null || !GameState.Instance.RadarActivated)
-        {
-            NotificationUI.ShowMessage("CẢNH BÁO: Không lưu chưa mở khóa! Hãy lên Tháp Điều Khiển để Kích Hoạt Trạm Radar.");
-            return;
-        }
-
-        // 3. Du dieu kien -> CAT CANH THOAT HIEM!
+        // 3. Đủ điều kiện -> CẤT CÁNH TẨU THOÁT NGAY LẬP TỨC!
         StartCoroutine(EscapeSequenceRoutine());
     }
 
@@ -152,7 +175,7 @@ public class HelicopterController : MonoBehaviour, IInteractable
 
         // Cat canh bay len troi
         Vector3 startPos = transform.position;
-        Vector3 targetPos = startPos + new Vector3(0, liftOffHeight, 60f);
+        Vector3 targetPos = startPos + transform.forward * 60f + Vector3.up * liftOffHeight;
         Quaternion startRot = transform.rotation;
         Quaternion targetRot = startRot * Quaternion.Euler(15f, 25f, -8f);
 
@@ -161,7 +184,7 @@ public class HelicopterController : MonoBehaviour, IInteractable
         if (cam != null)
         {
             cam.transform.SetParent(null);
-            cam.transform.position = startPos + new Vector3(-8f, 3f, -12f);
+            cam.transform.position = startPos - transform.forward * 12f + Vector3.up * 4f + transform.right * 6f;
             cam.transform.LookAt(transform.position + Vector3.up * 1.5f);
         }
 
