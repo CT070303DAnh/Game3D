@@ -989,6 +989,60 @@ namespace EscapeTheLab.EditorTools
             return upgradedCount;
         }
 
+        [MenuItem("EscapeTheLab/🔐 1-Click Khôi Phục & Nâng Cấp Nhiệm Vụ Mã Màu (Màn 1)", priority = 23)]
+        public static void RestoreAndFixLabColorPuzzleMenu()
+        {
+            FixAllShadersToURP();
+
+            string labScenePath = "Assets/_Project/Scenes/Lab.unity";
+            if (!System.IO.File.Exists(labScenePath))
+            {
+                EditorUtility.DisplayDialog("Lỗi", "Không tìm thấy file Scene 'Assets/_Project/Scenes/Lab.unity'!", "OK");
+                return;
+            }
+
+            var currentScene = EditorSceneManager.GetActiveScene();
+            bool needRestore = false;
+            string currentScenePath = currentScene.path;
+
+            Scene labScene;
+            if (currentScene.path != labScenePath)
+            {
+                labScene = EditorSceneManager.OpenScene(labScenePath, OpenSceneMode.Single);
+                needRestore = true;
+            }
+            else
+            {
+                labScene = currentScene;
+            }
+
+            bool success = RestoreAndFixLabColorPuzzleInternal(labScene);
+
+            EditorSceneManager.MarkSceneDirty(labScene);
+            EditorSceneManager.SaveScene(labScene);
+
+            if (needRestore && !string.IsNullOrEmpty(currentScenePath) && System.IO.File.Exists(currentScenePath))
+            {
+                EditorSceneManager.OpenScene(currentScenePath, OpenSceneMode.Single);
+            }
+
+            if (success)
+            {
+                EditorUtility.DisplayDialog("Khôi Phục Thành Công!",
+                    "Đã khôi phục và nâng cấp toàn diện Nhiệm vụ Mã Màu (Màn 1)!\n\n" +
+                    "• Vị trí Terminal: Đặt trang trọng ngay cạnh Cửa Thoát Hiểm (Room C: -2.8, 0, 23.5) hướng ra sảnh.\n" +
+                    "• Mô hình 3D: Console Sci-Fi công nghệ cao kèm 3 đèn LED báo hiệu (Xanh Dương, Đỏ, Xanh Lá) và bảng hiệu phát sáng.\n" +
+                    "• Giao diện UI: Tự động kết nối AccessCodeUIPanel với 3 nút màu rõ nét, hỗ trợ phím tắt [1] [2] [3] hoặc click chuột.\n" +
+                    "• Tương tác: Luôn hiện prompt hướng dẫn. Nếu chưa có điện sẽ nhắc người chơi lắp Cầu Chì & bật Máy Phát Điện.\n" +
+                    "• Dữ liệu gợi ý: ClueTerminal (Phòng B) & Note (Phòng A) được cập nhật chuỗi mã BLUE ➔ RED ➔ GREEN.\n\n" +
+                    "Scene Lab đã được lưu lại hoàn tất!", "Tuyệt vời");
+            }
+            else
+            {
+                EditorUtility.DisplayDialog("Thông báo", "Không thể khôi phục nhiệm vụ mã màu. Vui lòng kiểm tra console log.", "OK");
+            }
+        }
+
         [MenuItem("EscapeTheLab/🧪 1-Click Trang Hoàng & Nâng Cấp Đồ Vật Phòng Lab (Màn 1)", priority = 24)]
         public static void UpgradeAndDecorateLab()
         {
@@ -1018,6 +1072,7 @@ namespace EscapeTheLab.EditorTools
 
             int wallCount = ApplyP3DWallTexturesToScene(labScene);
             int propCount = DecorateLabWithSciFiPropsInternal(labScene);
+            RestoreAndFixLabColorPuzzleInternal(labScene);
 
             EditorSceneManager.MarkSceneDirty(labScene);
             EditorSceneManager.SaveScene(labScene);
@@ -1105,6 +1160,7 @@ namespace EscapeTheLab.EditorTools
             var sc1 = EditorSceneManager.OpenScene("Assets/_Project/Scenes/Lab.unity", OpenSceneMode.Single);
             int w1 = ApplyP3DWallTexturesToScene(sc1);
             int p1 = DecorateLabWithSciFiPropsInternal(sc1);
+            RestoreAndFixLabColorPuzzleInternal(sc1);
             BrightenSceneLighting(sc1);
             EditorSceneManager.MarkSceneDirty(sc1);
             EditorSceneManager.SaveScene(sc1);
@@ -1404,6 +1460,17 @@ namespace EscapeTheLab.EditorTools
                 {
                     Debug.Log("[AssetUpgradeTools] 💡 Tự động tăng sáng toàn diện cả 3 màn...");
                     BrightenAllScenesLighting();
+                };
+            }
+
+            string flagColor = "Temp/RunColorPuzzleFix.flag";
+            if (System.IO.File.Exists(flagColor))
+            {
+                try { System.IO.File.Delete(flagColor); } catch {}
+                EditorApplication.delayCall += () =>
+                {
+                    Debug.Log("[AssetUpgradeTools] 🔐 Tự động khôi phục và nâng cấp nhiệm vụ mã màu Màn 1...");
+                    RestoreAndFixLabColorPuzzleMenu();
                 };
             }
         }
@@ -1765,6 +1832,274 @@ namespace EscapeTheLab.EditorTools
             mat.EnableKeyword("_EMISSION");
             mat.SetColor("_EmissionColor", col * 3.5f);
             tube.GetComponent<Renderer>().material = mat;
+        }
+
+        public static bool RestoreAndFixLabColorPuzzleInternal(Scene labScene)
+        {
+            if (!labScene.isLoaded) return false;
+
+            // 1. Tìm hoặc tạo AccessCodeTerminal
+            GameObject termGO = null;
+            var puzzles = Object.FindObjectsByType<AccessCodePuzzle>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            if (puzzles != null && puzzles.Length > 0)
+            {
+                termGO = puzzles[0].gameObject;
+            }
+
+            if (termGO == null)
+            {
+                termGO = GameObject.Find("AccessCodeTerminal");
+            }
+
+            if (termGO == null)
+            {
+                var interRoot = GameObject.Find("Interactables");
+                if (interRoot != null)
+                {
+                    var tr = interRoot.transform.Find("AccessCodeTerminal");
+                    if (tr != null) termGO = tr.gameObject;
+                }
+            }
+
+            if (termGO == null)
+            {
+                termGO = new GameObject("AccessCodeTerminal");
+                var interRoot = GameObject.Find("Interactables");
+                if (interRoot != null) termGO.transform.SetParent(interRoot.transform, false);
+            }
+
+            Undo.RegisterFullObjectHierarchyUndo(termGO, "Restore Lab Color Puzzle Terminal");
+
+            termGO.name = "AccessCodeTerminal";
+            // Đặt vị trí trang trọng cạnh ExitDoor (Room C)
+            termGO.transform.position = new Vector3(-2.8f, 0f, 23.5f);
+            termGO.transform.rotation = Quaternion.Euler(0, 180f, 0); // Quay mặt vào phòng hướng về phía nam
+
+            int lay = LayerMask.NameToLayer("Interactable");
+            termGO.layer = lay >= 0 ? lay : 0;
+
+            // Đảm bảo BoxCollider kích thước vừa vặn cho tương tác
+            var boxCol = termGO.GetComponent<BoxCollider>();
+            if (boxCol == null) boxCol = termGO.AddComponent<BoxCollider>();
+            boxCol.center = new Vector3(0f, 1.0f, 0f);
+            boxCol.size = new Vector3(1.6f, 2.0f, 1.4f);
+
+            // Tắt MeshRenderer khối cube thô cũ nếu có
+            var rootMr = termGO.GetComponent<MeshRenderer>();
+            if (rootMr != null) rootMr.enabled = false;
+
+            // 2. Gắn model 3D Sci-Fi Console
+            var existingVisual = termGO.transform.Find("Visual_3D_Model");
+            if (existingVisual == null)
+            {
+                var consolePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Sci-Fi Styled Modular Pack/Prefabs/Decorative elements/console.prefab");
+                if (consolePrefab == null)
+                {
+                    consolePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Sci-Fi Styled Modular Pack/Prefabs/Decorative elements/computer_station.prefab");
+                }
+
+                if (consolePrefab != null)
+                {
+                    var vGO = (GameObject)PrefabUtility.InstantiatePrefab(consolePrefab, termGO.transform);
+                    vGO.name = "Visual_3D_Model";
+                    vGO.transform.localPosition = Vector3.zero;
+                    vGO.transform.localRotation = Quaternion.identity;
+                    vGO.transform.localScale = Vector3.one * 1.05f;
+
+                    // Tắt collider con để raycast vào BoxCollider chính
+                    foreach (var c in vGO.GetComponentsInChildren<Collider>(true))
+                    {
+                        c.enabled = false;
+                    }
+                }
+            }
+
+            // 3. Tạo 3 đèn LED màu (Xanh dương, Đỏ, Xanh lá) trên bảng điều khiển
+            var indRoot = termGO.transform.Find("ColorIndicators");
+            if (indRoot != null) Undo.DestroyObjectImmediate(indRoot.gameObject);
+
+            indRoot = new GameObject("ColorIndicators").transform;
+            indRoot.SetParent(termGO.transform, false);
+
+            var blueLamp = CreateIndicatorLamp(indRoot, "Lamp_Blue", new Vector3(-0.35f, 1.35f, -0.05f), Color.blue);
+            var redLamp = CreateIndicatorLamp(indRoot, "Lamp_Red", new Vector3(0f, 1.35f, -0.05f), Color.red);
+            var greenLamp = CreateIndicatorLamp(indRoot, "Lamp_Green", new Vector3(0.35f, 1.35f, -0.05f), Color.green);
+
+            // Bảng hiệu phát sáng "TERMINAL MÃ MÀU"
+            var signGO = termGO.transform.Find("Sign_AccessCode");
+            if (signGO != null) Undo.DestroyObjectImmediate(signGO.gameObject);
+
+            var sign = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            sign.name = "Sign_AccessCode";
+            sign.transform.SetParent(termGO.transform, false);
+            sign.transform.localPosition = new Vector3(0f, 1.55f, -0.05f);
+            sign.transform.localScale = new Vector3(1.1f, 0.22f, 0.05f);
+            var signCol = sign.GetComponent<Collider>();
+            if (signCol != null) Object.DestroyImmediate(signCol);
+
+            var signMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            signMat.color = new Color(0.05f, 0.2f, 0.35f);
+            signMat.EnableKeyword("_EMISSION");
+            signMat.SetColor("_EmissionColor", new Color(0f, 1.5f, 2.2f));
+            sign.GetComponent<Renderer>().material = signMat;
+
+            // Đèn rọi màn hình
+            var lightTr = termGO.transform.Find("ScreenGlowLight");
+            if (lightTr != null) Undo.DestroyObjectImmediate(lightTr.gameObject);
+
+            var scrLightGO = new GameObject("ScreenGlowLight");
+            scrLightGO.transform.SetParent(termGO.transform, false);
+            scrLightGO.transform.localPosition = new Vector3(0f, 1.25f, -0.25f);
+            var sl = scrLightGO.AddComponent<Light>();
+            sl.type = LightType.Point;
+            sl.color = new Color(0.2f, 0.85f, 1f);
+            sl.intensity = 3.5f;
+            sl.range = 5.0f;
+
+            // 4. Cấu hình component AccessCodePuzzle
+            var puzzleComp = termGO.GetComponent<AccessCodePuzzle>();
+            if (puzzleComp == null) puzzleComp = termGO.AddComponent<AccessCodePuzzle>();
+
+            var soPuzzle = new SerializedObject(puzzleComp);
+            var lampsProp = soPuzzle.FindProperty("indicatorLamps");
+            lampsProp.arraySize = 3;
+            lampsProp.GetArrayElementAtIndex(0).objectReferenceValue = blueLamp.GetComponent<Renderer>();
+            lampsProp.GetArrayElementAtIndex(1).objectReferenceValue = redLamp.GetComponent<Renderer>();
+            lampsProp.GetArrayElementAtIndex(2).objectReferenceValue = greenLamp.GetComponent<Renderer>();
+
+            // 5. Tìm và cấu hình UI Canvas
+            var canvas = Object.FindAnyObjectByType<Canvas>(FindObjectsInactive.Include);
+            if (canvas == null)
+            {
+                var cGO = new GameObject("Canvas");
+                canvas = cGO.AddComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                cGO.AddComponent<UnityEngine.UI.CanvasScaler>();
+                cGO.AddComponent<UnityEngine.UI.GraphicRaycaster>();
+            }
+
+            var acUI = Object.FindAnyObjectByType<AccessCodeUI>(FindObjectsInactive.Include);
+            if (acUI == null)
+            {
+                var auiGO = new GameObject("AccessCodeUI");
+                auiGO.transform.SetParent(canvas.transform, false);
+                acUI = auiGO.AddComponent<AccessCodeUI>();
+            }
+
+            // Đảm bảo EventSystem
+            AccessCodeUI.EnsureEventSystem();
+
+            // Tìm hoặc tạo AccessCodeUIPanel
+            Transform acPnlTr = canvas.transform.Find("AccessCodeUIPanel");
+            if (acPnlTr == null)
+            {
+                foreach (var t in canvas.GetComponentsInChildren<Transform>(true))
+                {
+                    if (t.name == "AccessCodeUIPanel")
+                    {
+                        acPnlTr = t;
+                        break;
+                    }
+                }
+            }
+
+            if (acPnlTr == null)
+            {
+                acUI.ResolveReferences();
+                acPnlTr = canvas.transform.Find("AccessCodeUIPanel");
+            }
+
+            if (acPnlTr != null)
+            {
+                soPuzzle.FindProperty("puzzlePanel").objectReferenceValue = acPnlTr.gameObject;
+                acPnlTr.gameObject.SetActive(false);
+
+                var soACUI = new SerializedObject(acUI);
+                soACUI.FindProperty("puzzlePanel").objectReferenceValue = acPnlTr.gameObject;
+
+                var blueBtn = acPnlTr.Find("BlueBtn")?.GetComponent<UnityEngine.UI.Button>();
+                var redBtn = acPnlTr.Find("RedBtn")?.GetComponent<UnityEngine.UI.Button>();
+                var greenBtn = acPnlTr.Find("GreenBtn")?.GetComponent<UnityEngine.UI.Button>();
+                var closeBtn = acPnlTr.Find("CloseACBtn")?.GetComponent<UnityEngine.UI.Button>();
+                var statusTxt = acPnlTr.Find("ACStatus")?.GetComponent<UnityEngine.UI.Text>();
+                var titleTxt = acPnlTr.Find("ACTitle")?.GetComponent<UnityEngine.UI.Text>();
+
+                if (blueBtn != null) soACUI.FindProperty("blueButton").objectReferenceValue = blueBtn;
+                if (redBtn != null) soACUI.FindProperty("redButton").objectReferenceValue = redBtn;
+                if (greenBtn != null) soACUI.FindProperty("greenButton").objectReferenceValue = greenBtn;
+                if (closeBtn != null) soACUI.FindProperty("closePuzzleButton").objectReferenceValue = closeBtn;
+                if (statusTxt != null) soACUI.FindProperty("statusText").objectReferenceValue = statusTxt;
+                if (titleTxt != null) soACUI.FindProperty("titleText").objectReferenceValue = titleTxt;
+
+                soACUI.ApplyModifiedProperties();
+            }
+
+            soPuzzle.ApplyModifiedProperties();
+
+            // 6. Đảm bảo ClueTerminal trong Phòng B
+            EnsureClueTerminalInLab();
+
+            // 7. Đảm bảo Note trong Phòng A
+            EnsureAccessCodeNoteInLab();
+
+            Debug.Log("[AssetUpgradeTools] 🔐 Đã khôi phục và kết nối hoàn chỉnh AccessCodeTerminal & AccessCodeUI tại Room C!");
+            return true;
+        }
+
+        private static GameObject CreateIndicatorLamp(Transform parent, string name, Vector3 localPos, Color color)
+        {
+            var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            sphere.name = name;
+            sphere.transform.SetParent(parent, false);
+            sphere.transform.localPosition = localPos;
+            sphere.transform.localScale = new Vector3(0.14f, 0.14f, 0.14f);
+            var col = sphere.GetComponent<Collider>();
+            if (col != null) Object.DestroyImmediate(col);
+
+            var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            mat.color = color;
+            mat.EnableKeyword("_EMISSION");
+            mat.SetColor("_EmissionColor", color * 2.5f);
+            sphere.GetComponent<Renderer>().material = mat;
+            return sphere;
+        }
+
+        private static void EnsureClueTerminalInLab()
+        {
+            var term = Object.FindAnyObjectByType<Terminal>(FindObjectsInactive.Include);
+            GameObject termGO = term != null ? term.gameObject : GameObject.Find("ClueTerminal");
+            if (termGO == null)
+            {
+                termGO = GameObject.Find("Terminal");
+            }
+
+            if (termGO != null)
+            {
+                termGO.transform.position = new Vector3(16f, 0.1f, 1f);
+                var tComp = termGO.GetComponent<Terminal>();
+                if (tComp != null)
+                {
+                    var so = new SerializedObject(tComp);
+                    so.FindProperty("terminalTitle").stringValue = "TERMINAL DỮ LIỆU AN NINH";
+                    so.FindProperty("clueText").stringValue =
+                        "NHẬT KÝ AN NINH PHÒNG THÍ NGHIỆM:\n\n" +
+                        "1. Thẻ Bảo Mật: Cất trong Phòng Máy Chủ (Phòng B) phía Đông.\n" +
+                        "2. Cầu Chì Nguồn: Tủ lưu trữ Phòng Năng Lượng (Phòng A) phía Tây.\n" +
+                        "3. MÃ MÀU TERMINAL CỬA THOÁT HIỂM: BLUE ➔ RED ➔ GREEN\n\n" +
+                        "CẢNH BÁO: Máy phát điện đang ngắt nguồn. Phải cấp điện trước mới khởi động được Terminal mã màu!";
+                    so.FindProperty("requiresPower").boolValue = false; // Luôn xem được để đọc gợi ý
+                    so.ApplyModifiedProperties();
+                }
+            }
+        }
+
+        private static void EnsureAccessCodeNoteInLab()
+        {
+            var note = GameObject.Find("AccessCodeNote");
+            if (note != null)
+            {
+                note.transform.position = new Vector3(-12f, 0.8f, 7f);
+            }
         }
 
         private static void RebuildNavMeshInScene(GameObject envRoot)

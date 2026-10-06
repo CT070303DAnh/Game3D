@@ -81,11 +81,11 @@ public class ObjectiveManager : MonoBehaviour
         }
         else
         {
-            objectives.Add(new Objective("security_card", "Tìm Thẻ Bảo Mật"));
-            objectives.Add(new Objective("fuse", "Tìm Cầu Chì"));
-            objectives.Add(new Objective("power", "Khôi phục Điện (Máy Phát Điện)"));
-            objectives.Add(new Objective("access_code", "Tìm & Nhập Mã Truy Cập"));
-            objectives.Add(new Objective("exit", "Thoát Khỏi Phòng Thí Nghiệm"));
+            objectives.Add(new Objective("security_card", "Tìm Thẻ Bảo Mật (Security Card - Phòng B)"));
+            objectives.Add(new Objective("fuse", "Tìm Cầu Chì (Power Fuse - Phòng A)"));
+            objectives.Add(new Objective("power", "Lắp Cầu Chì & Bật Máy Phát Điện (Phòng A)"));
+            objectives.Add(new Objective("access_code", "Giải Mã Màu Tại Terminal Cửa Thoát Hiểm (BLUE ➔ RED ➔ GREEN)"));
+            objectives.Add(new Objective("exit", "Mở Cửa Thoát Hiểm Rời Khỏi Phòng Lab!"));
         }
 
         Debug.Log($"[ObjectiveManager] Objectives initialized for scene: {sceneName}");

@@ -82,6 +82,7 @@ public class LabEnvironmentBuilder : Editor
 
             EditorUtility.DisplayProgressBar("Building Lab", "Decorating with Sci-Fi Props...", 0.82f);
             EscapeTheLab.EditorTools.AssetUpgradeTools.DecorateLabWithSciFiPropsInternal(EditorSceneManager.GetActiveScene());
+            EscapeTheLab.EditorTools.AssetUpgradeTools.RestoreAndFixLabColorPuzzleInternal(EditorSceneManager.GetActiveScene());
 
             EditorUtility.DisplayProgressBar("Building Lab", "Baking NavMesh...", 0.88f);
             BakeNavMeshNow(envRoot);
@@ -333,7 +334,7 @@ public class LabEnvironmentBuilder : Editor
         Move("Terminal",            new Vector3( 16f, 0.1f,  1f));
         Move("Generator",           new Vector3(-14f, 0.1f,  1f));
         Move("ExitDoor",            new Vector3(  0f, 2.0f, 24.5f));
-        Move("AccessCodeTerminal",  new Vector3( -3f, 0.1f, 18f));
+        Move("AccessCodeTerminal",  new Vector3(-2.8f, 0f, 23.5f));
         Move("Robot",               new Vector3(  0f, 0.1f,  6f));
         Move("Player",              new Vector3(  0f, 0.5f, -9f));
         Move("Waypoints",           new Vector3(  0f, 0f,    0f));

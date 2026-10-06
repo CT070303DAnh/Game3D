@@ -431,8 +431,8 @@ public class EscapeTheLabSetupPhase2 : Editor
             "Ghi Chú Mã Truy Cập", new Vector3(-6, 0.8f, -10), Color.white);
         CreateTerminalObj(root.transform, new Vector3(10, 0, 3));
         CreateGeneratorObj(root.transform, new Vector3(-10, 0, -5));
-        CreateExitDoorObj(root.transform, new Vector3(0, 2, 24));
-        CreateAccessTerminalObj(root.transform, new Vector3(-8, 0, -15));
+        CreateExitDoorObj(root.transform, new Vector3(0, 2, 24.5f));
+        CreateAccessTerminalObj(root.transform, new Vector3(-2.8f, 0f, 23.5f));
     }
 
     private static void CreateItem(Transform p, string n, PickupItem.ItemType t,
