@@ -22,6 +22,7 @@ public class GameState : MonoBehaviour
     [SerializeField] private bool laboratoryKeyCollected;
     [SerializeField] private bool accessCodeFound;
     [SerializeField] private bool jetFuelCollected;
+    [SerializeField] private bool wrenchCollected;
 
     // ───────────────────────────────────────────────
     // Puzzle / World State
@@ -43,6 +44,7 @@ public class GameState : MonoBehaviour
     public static event System.Action OnAccessCodeSolved;
     public static event System.Action OnExitUnlocked;
     public static event System.Action OnJetFuelCollected;
+    public static event System.Action OnWrenchCollected;
     public static event System.Action OnRadarActivated;
     public static event System.Action OnDomeGateOpened;
     public static event System.Action OnHelipadEscaped;
@@ -56,6 +58,7 @@ public class GameState : MonoBehaviour
     public bool LaboratoryKeyCollected => laboratoryKeyCollected;
     public bool AccessCodeFound => accessCodeFound;
     public bool JetFuelCollected => jetFuelCollected;
+    public bool WrenchCollected => wrenchCollected;
     public bool PowerRestored => powerRestored;
     public bool AccessCodeSolved => accessCodeSolved;
     public bool ExitUnlocked => exitUnlocked;
@@ -120,6 +123,7 @@ public class GameState : MonoBehaviour
         accessCodeSolved = false;
         exitUnlocked = false;
         jetFuelCollected = false;
+        wrenchCollected = false;
         radarActivated = false;
         domeGateOpened = false;
         helipadEscaped = false;
@@ -159,6 +163,14 @@ public class GameState : MonoBehaviour
         if (laboratoryKeyCollected) return;
         laboratoryKeyCollected = true;
         Debug.Log("[GameState] Laboratory Key collected.");
+    }
+
+    public void CollectWrench()
+    {
+        if (wrenchCollected) return;
+        wrenchCollected = true;
+        Debug.Log("[GameState] Wrench collected.");
+        OnWrenchCollected?.Invoke();
     }
 
     public void SetAccessCodeFound()

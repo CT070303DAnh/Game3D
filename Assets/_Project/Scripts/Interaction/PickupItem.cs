@@ -46,6 +46,10 @@ public class PickupItem : MonoBehaviour, IInteractable
     private void Start()
     {
         startPos = transform.position;
+        if (itemType == ItemType.Wrench)
+        {
+            EnsureWrenchVisuals();
+        }
     }
 
     private void Update()
@@ -107,10 +111,104 @@ public class PickupItem : MonoBehaviour, IInteractable
             case ItemType.JetFuel:
                 GameState.Instance?.CollectJetFuel();
                 break;
-            case ItemType.EngineerNote:
             case ItemType.Wrench:
+                GameState.Instance?.CollectWrench();
+                break;
+            case ItemType.EngineerNote:
                 // Thong bao da duoc hien thi qua pickupMessage
                 break;
+        }
+    }
+
+    private void EnsureWrenchVisuals()
+    {
+        if (transform.Find("WrenchModel") != null) return;
+
+        // An mesh mac dinh cua Capsule hoac Cube neu co
+        var mr = GetComponent<MeshRenderer>();
+        if (mr != null) mr.enabled = false;
+
+        Shader litShader = Shader.Find("Universal Render Pipeline/Lit");
+        if (litShader == null) litShader = Shader.Find("Standard");
+        Material wrenchMat = new Material(litShader);
+        wrenchMat.color = new Color(0.88f, 0.90f, 0.94f);
+        wrenchMat.SetFloat("_Metallic", 0.92f);
+        wrenchMat.SetFloat("_Smoothness", 0.82f);
+
+        var modelRoot = new GameObject("WrenchModel");
+        modelRoot.transform.SetParent(transform, false);
+        modelRoot.transform.localRotation = Quaternion.Euler(20f, 45f, 0f);
+
+        // Can co le
+        var handle = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        handle.name = "Handle";
+        handle.transform.SetParent(modelRoot.transform, false);
+        handle.transform.localPosition = Vector3.zero;
+        handle.transform.localScale = new Vector3(0.08f, 0.55f, 0.04f);
+        handle.GetComponent<Renderer>().material = wrenchMat;
+        Destroy(handle.GetComponent<Collider>());
+
+        // Dau ngam co le
+        var headBase = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        headBase.name = "JawHead";
+        headBase.transform.SetParent(modelRoot.transform, false);
+        headBase.transform.localPosition = new Vector3(0, 0.32f, 0);
+        headBase.transform.localScale = new Vector3(0.24f, 0.04f, 0.24f);
+        headBase.GetComponent<Renderer>().material = wrenchMat;
+        Destroy(headBase.GetComponent<Collider>());
+
+        var jawL = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        jawL.name = "Jaw_L";
+        jawL.transform.SetParent(modelRoot.transform, false);
+        jawL.transform.localPosition = new Vector3(-0.09f, 0.44f, 0);
+        jawL.transform.localScale = new Vector3(0.06f, 0.18f, 0.04f);
+        jawL.GetComponent<Renderer>().material = wrenchMat;
+        Destroy(jawL.GetComponent<Collider>());
+
+        var jawR = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        jawR.name = "Jaw_R";
+        jawR.transform.SetParent(modelRoot.transform, false);
+        jawR.transform.localPosition = new Vector3(0.09f, 0.44f, 0);
+        jawR.transform.localScale = new Vector3(0.06f, 0.18f, 0.04f);
+        jawR.GetComponent<Renderer>().material = wrenchMat;
+        Destroy(jawR.GetComponent<Collider>());
+
+        // Vong chu O o duoi can
+        var ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        ring.name = "RingEnd";
+        ring.transform.SetParent(modelRoot.transform, false);
+        ring.transform.localPosition = new Vector3(0, -0.32f, 0);
+        ring.transform.localScale = new Vector3(0.18f, 0.038f, 0.18f);
+        ring.GetComponent<Renderer>().material = wrenchMat;
+        Destroy(ring.GetComponent<Collider>());
+
+        // Den chieu sang toa quang cho Co Le
+        if (GetComponentInChildren<Light>() == null)
+        {
+            var lightGO = new GameObject("WrenchLight");
+            lightGO.transform.SetParent(transform, false);
+            lightGO.transform.localPosition = new Vector3(0, 0.2f, 0);
+            var l = lightGO.AddComponent<Light>();
+            l.type = LightType.Point;
+            l.color = new Color(1.0f, 0.85f, 0.3f);
+            l.range = 3.5f;
+            l.intensity = 2.2f;
+        }
+
+        // Bien 3D danh dau Co Le
+        if (transform.Find("WrenchLabel") == null)
+        {
+            var signGO = new GameObject("WrenchLabel");
+            signGO.transform.SetParent(transform, false);
+            signGO.transform.localPosition = new Vector3(0, 0.7f, 0);
+            signGO.transform.localRotation = Quaternion.Euler(0, 180f, 0);
+            signGO.transform.localScale = Vector3.one * 0.022f;
+            var tm = signGO.AddComponent<TextMesh>();
+            tm.text = "[ CỜ LÊ SỬA CHỮA ]";
+            tm.fontSize = 32;
+            tm.alignment = TextAlignment.Center;
+            tm.anchor = TextAnchor.MiddleCenter;
+            tm.color = Color.yellow;
         }
     }
 }

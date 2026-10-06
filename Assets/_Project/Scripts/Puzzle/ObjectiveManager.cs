@@ -36,6 +36,7 @@ public class ObjectiveManager : MonoBehaviour
         GameState.OnAccessCodeSolved      += () => CompleteObjective("access_code");
         GameState.OnExitUnlocked          += () => CompleteObjective("exit");
         GameState.OnJetFuelCollected      += () => CompleteObjective("fuel");
+        GameState.OnWrenchCollected       += () => CompleteObjective("wrench");
         GameState.OnRadarActivated        += () => CompleteObjective("radar");
         GameState.OnDomeGateOpened        += () => CompleteObjective("dome_gate");
         GameState.OnHelipadEscaped        += () => CompleteObjective("helipad_escape");
@@ -50,6 +51,7 @@ public class ObjectiveManager : MonoBehaviour
         GameState.OnAccessCodeSolved      -= () => CompleteObjective("access_code");
         GameState.OnExitUnlocked          -= () => CompleteObjective("exit");
         GameState.OnJetFuelCollected      -= () => CompleteObjective("fuel");
+        GameState.OnWrenchCollected       -= () => CompleteObjective("wrench");
         GameState.OnRadarActivated        -= () => CompleteObjective("radar");
         GameState.OnDomeGateOpened        -= () => CompleteObjective("dome_gate");
         GameState.OnHelipadEscaped        -= () => CompleteObjective("helipad_escape");
@@ -65,12 +67,18 @@ public class ObjectiveManager : MonoBehaviour
 
         if (sceneName.Contains("Level2") || sceneName.Contains("Reactor"))
         {
-            objectives.Add(new Objective("valves", "Đóng 3 Van Xả Khí Độc (Ngừng ngạt khí)"));
+            objectives.Add(new Objective("wrench", "Tìm Cờ Lê Sửa Chữa (Wrench) tại Kho Phụ Tùng"));
+            objectives.Add(new Objective("valves", "Dùng Cờ Lê Khóa 3 Van Xả Khí Độc (Ngừng ngạt khí)"));
             objectives.Add(new Objective("fuse", "Tìm Cầu Chì Thang Máy (Power Fuse)"));
             objectives.Add(new Objective("power", "Đóng Cầu Dao Điện Tổng"));
             objectives.Add(new Objective("wall_numbers", "Tìm 3 Con Số Trên Tường (1, 4, 2)"));
             objectives.Add(new Objective("call_elevator", "Bấm Nút Mở Cửa Thang Máy"));
             objectives.Add(new Objective("elevator_code", "Vào Thang Máy & Nhập Mã [2 1 4]"));
+
+            if (GameState.Instance != null && GameState.Instance.WrenchCollected)
+            {
+                CompleteObjective("wrench");
+            }
         }
         else if (sceneName.Contains("Level3") || sceneName.Contains("Helipad"))
         {

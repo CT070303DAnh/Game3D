@@ -40,7 +40,7 @@ public class ToxicGasManager : MonoBehaviour
         playerHealth = FindFirstObjectByType<PlayerHealth>();
 
         // Thong bao ngay khi bat dau man choi
-        NotificationUI.ShowMessage("CẢNH BÁO: RÒ RỈ KHÍ ĐỘC! 3 van đang xả khí (-1 HP/giây). Hãy vặn đóng van khẩn cấp!");
+        NotificationUI.ShowMessage("CẢNH BÁO: RÒ RỈ KHÍ ĐỘC! Lấy Cờ Lê tại Kho Phụ Tùng (Phía Bắc) để vặn khóa 3 van xả khí!");
     }
 
     private void Update()
