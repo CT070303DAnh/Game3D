@@ -58,6 +58,7 @@ public class PlayerInteraction : MonoBehaviour
     private void Update()
     {
         if (GameManager.Instance != null && !GameManager.Instance.IsPlaying) return;
+        if (InventoryUI.IsOpen) return;
 
         DetectInteractable();
         HandleInteractInput();

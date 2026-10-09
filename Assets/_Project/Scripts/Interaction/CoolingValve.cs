@@ -51,6 +51,66 @@ public class CoolingValve : MonoBehaviour, IInteractable
     {
         UpdateVisual();
         EnsureRealisticSteamVisuals();
+        EnsureValveVisuals();
+    }
+
+    private void EnsureValveVisuals()
+    {
+        if (wheelTransform == null)
+        {
+            var wheelChild = transform.Find("ValveWheel");
+            if (wheelChild != null) wheelTransform = wheelChild;
+        }
+
+        if (wheelTransform != null)
+        {
+            var oldValve = wheelTransform.Find("PSX_Valve");
+            if (oldValve != null && oldValve.localScale.x < 4.0f)
+            {
+                DestroyImmediate(oldValve.gameObject);
+                oldValve = null;
+            }
+
+            if (oldValve == null)
+            {
+                GameObject valvePrefab = Resources.Load<GameObject>("ItemModels/Model_Valve");
+                if (valvePrefab != null)
+                {
+                    var mr = wheelTransform.GetComponent<MeshRenderer>();
+                    if (mr != null) mr.enabled = false;
+
+                    var inst = Instantiate(valvePrefab, wheelTransform);
+                    inst.name = "PSX_Valve";
+                    inst.transform.localPosition = Vector3.zero;
+                    inst.transform.localRotation = Quaternion.identity;
+                    inst.transform.localScale = Vector3.one * 5.0f; // Tăng gấp đôi kích thước tay quay van
+
+                    foreach (var c in inst.GetComponentsInChildren<Collider>())
+                    {
+                        Destroy(c);
+                    }
+
+                Shader urpLit = Shader.Find("Universal Render Pipeline/Lit");
+                if (urpLit != null)
+                {
+                    foreach (var rend in inst.GetComponentsInChildren<Renderer>())
+                    {
+                        foreach (var mat in rend.materials)
+                        {
+                            if (mat.shader != urpLit)
+                            {
+                                Texture tex = mat.mainTexture;
+                                Color col = mat.HasProperty("_Color") ? mat.color : Color.white;
+                                mat.shader = urpLit;
+                                if (tex != null) mat.SetTexture("_BaseMap", tex);
+                                mat.SetColor("_BaseColor", col);
+                            }
+                        }
+                    }
+                    }
+                }
+            }
+        }
     }
 
     public void Interact()

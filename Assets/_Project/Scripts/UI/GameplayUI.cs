@@ -113,6 +113,16 @@ public class GameplayUI : MonoBehaviour
         Transform mainHP = canvasRoot.Find("HPPanel");
         Transform mainObj = canvasRoot.Find("ObjectivePanel");
 
+        // Tiêu diệt triệt để TẤT CẢ các InventoryPanel cũ trong toàn bộ Scene để tránh panel ma che khuất
+        for (int i = canvasRoot.childCount - 1; i >= 0; i--)
+        {
+            var child = canvasRoot.GetChild(i);
+            if (child.name == "InventoryPanel")
+            {
+                DestroyImmediate(child.gameObject);
+            }
+        }
+
         foreach (var t in allPanels)
         {
             if (t == null) continue;
@@ -123,6 +133,21 @@ public class GameplayUI : MonoBehaviour
             else if (t.gameObject.name == "ObjectivePanel" && t != mainObj && !t.IsChildOf(canvasRoot))
             {
                 DestroyImmediate(t.gameObject);
+            }
+            else if (t.gameObject.name == "InventoryPanel")
+            {
+                DestroyImmediate(t.gameObject);
+            }
+        }
+
+        // Tiêu diệt tất cả InventoryUI thừa ngoài canvas chính
+        var myInvUI = GetComponent<InventoryUI>();
+        var allInv = FindObjectsByType<InventoryUI>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (var inv in allInv)
+        {
+            if (inv != null && inv != myInvUI && inv.gameObject != myCanvas.gameObject)
+            {
+                DestroyImmediate(inv);
             }
         }
 
@@ -150,6 +175,20 @@ public class GameplayUI : MonoBehaviour
 
     private void Update()
     {
+        if (Input.GetKeyDown(KeyCode.Tab) || Input.GetKeyDown(KeyCode.I))
+        {
+            var inv = InventoryUI.Instance ?? GetComponent<InventoryUI>() ?? FindFirstObjectByType<InventoryUI>();
+            inv?.ToggleInventory();
+        }
+        else if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            if (InventoryUI.IsOpen)
+            {
+                var inv = InventoryUI.Instance ?? GetComponent<InventoryUI>() ?? FindFirstObjectByType<InventoryUI>();
+                inv?.CloseInventory();
+            }
+        }
+
         // An tam ngam Crosshair khi mo cac menu/modal/inventory
         if (crosshairGO != null)
         {

@@ -1,4 +1,4 @@
-﻿#if UNITY_EDITOR
+#if UNITY_EDITOR
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEditor;
@@ -97,13 +97,30 @@ public static class SceneQuickSwitcher
         EnsureLevel2Upgraded(true);
     }
 
+    [MenuItem("EscapeTheLab/🎨 Đồng Bộ Vật Phẩm Retro PSX (Thẻ, Cờ Lê, Cầu Chì, Van)", false, 5)]
+    public static void MenuUpgradePSXItems()
+    {
+        UpgradeHorrorPuzzleMaterials();
+        UpgradeSceneItemsToPSX();
+        SyncCurrentSceneUI();
+        EditorUtility.DisplayDialog("Thành Công",
+            "ĐÃ NÂNG CẤP TOÀN BỘ VẬT PHẨM SANG RETRO PSX HORROR!\n\n" +
+            "• Thẻ Bảo Mật (Lab): Model Card_Security + Icon Retro PSX.\n" +
+            "• Cờ Lê Sửa Chữa (Reactor): Model Crank kim loại chân thật + Icon.\n" +
+            "• Cầu Chì Cao Áp (Reactor & Lab): Model BatteryC công nghiệp + Icon.\n" +
+            "• Van Xả Khí Độc: Model Valve công nghiệp xoay mượt mà.\n" +
+            "• Đĩa Mềm & Chìa Khóa: Model Floppy & SmallKey.\n" +
+            "• Túi Đồ [TAB]: Giao diện Grid hiển thị trọn bộ Icon Retro PSX sắc nét!",
+            "Tuyệt Vời!");
+    }
+
     [InitializeOnLoadMethod]
     private static void AutoRunOnLoad()
     {
         EditorApplication.delayCall += () =>
         {
-            if (SessionState.GetBool("AllScenes_AutoSynced_V6", false)) return;
-            SessionState.SetBool("AllScenes_AutoSynced_V6", true);
+            if (SessionState.GetBool("AllScenes_AutoSynced_V7", false)) return;
+            SessionState.SetBool("AllScenes_AutoSynced_V7", true);
             SyncAllScenes(false);
         };
     }
@@ -216,13 +233,22 @@ public static class SceneQuickSwitcher
         gameplayCanvas.enabled = true;
         gameplayCanvas.gameObject.SetActive(true);
 
-        // 2. Tiêu diệt TẤT CẢ GameplayUI thừa trong Scene (chỉ giữ duy nhất 1 GameplayUI trên GameplayCanvas)
+        // 2. Tiêu diệt TẤT CẢ GameplayUI & InventoryUI thừa trong Scene (chỉ giữ duy nhất trên GameplayCanvas)
         var allGPUI = Object.FindObjectsByType<GameplayUI>(FindObjectsInactive.Include);
         foreach (var ui in allGPUI)
         {
             if (ui.gameObject != gameplayCanvas.gameObject)
             {
                 Object.DestroyImmediate(ui);
+            }
+        }
+
+        var allInvUI = Object.FindObjectsByType<InventoryUI>(FindObjectsInactive.Include);
+        foreach (var inv in allInvUI)
+        {
+            if (inv.gameObject != gameplayCanvas.gameObject)
+            {
+                Object.DestroyImmediate(inv);
             }
         }
 
@@ -266,9 +292,13 @@ public static class SceneQuickSwitcher
             {
                 Object.DestroyImmediate(t.gameObject);
             }
+            else if (t.name == "InventoryPanel" && t.parent != gameplayCanvas.transform)
+            {
+                Object.DestroyImmediate(t.gameObject);
+            }
         }
 
-        // Xóa duplicate HPPanel và ObjectivePanel bên trong GameplayCanvas (nếu có nhiều hơn 1)
+        // Xóa duplicate HPPanel, ObjectivePanel và InventoryPanel bên trong GameplayCanvas (nếu có nhiều hơn 1)
         for (int i = gameplayCanvas.transform.childCount - 1; i >= 0; i--)
         {
             var child = gameplayCanvas.transform.GetChild(i);
@@ -287,6 +317,15 @@ public static class SceneQuickSwitcher
                 for (int j = 0; j < gameplayCanvas.transform.childCount; j++)
                 {
                     if (gameplayCanvas.transform.GetChild(j).name == "ObjectivePanel") { firstIdx = j; break; }
+                }
+                if (i != firstIdx) Object.DestroyImmediate(child.gameObject);
+            }
+            else if (child.name == "InventoryPanel")
+            {
+                int firstIdx = -1;
+                for (int j = 0; j < gameplayCanvas.transform.childCount; j++)
+                {
+                    if (gameplayCanvas.transform.GetChild(j).name == "InventoryPanel") { firstIdx = j; break; }
                 }
                 if (i != firstIdx) Object.DestroyImmediate(child.gameObject);
             }
@@ -345,6 +384,8 @@ public static class SceneQuickSwitcher
 
         // 5. Khắc phục vật liệu màu hồng tím (URP shader)
         FixPinkMaterials();
+        UpgradeHorrorPuzzleMaterials();
+        UpgradeSceneItemsToPSX();
 
         // 6. Tối ưu hóa ánh sáng Màn 1 (Phòng Thí Nghiệm): loại bỏ đèn cháy trần, tạo ánh sáng êm dịu đồng đều
         if (scene.name.Contains("Lab") && !scene.name.Contains("Reactor") && !scene.name.Contains("Helipad"))
@@ -688,6 +729,70 @@ public static class SceneQuickSwitcher
     /// <summary>
     /// Sửa các vật liệu màu hồng tím (Pink Shader Error) sang URP Shader tương thích.
     /// </summary>
+    public static void UpgradeHorrorPuzzleMaterials()
+    {
+        Shader urpLit = Shader.Find("Universal Render Pipeline/Lit");
+        if (urpLit == null) return;
+
+        string[] matGuids = AssetDatabase.FindAssets("t:Material", new string[] { "Assets/HorrorPuzzleItems" });
+        foreach (var guid in matGuids)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (mat != null && mat.shader != urpLit)
+            {
+                Texture tex = mat.mainTexture;
+                Color col = mat.HasProperty("_Color") ? mat.color : Color.white;
+                mat.shader = urpLit;
+                if (tex != null) mat.SetTexture("_BaseMap", tex);
+                mat.SetColor("_BaseColor", col);
+                mat.SetFloat("_Smoothness", 0.35f);
+                EditorUtility.SetDirty(mat);
+            }
+        }
+        AssetDatabase.SaveAssets();
+    }
+
+    public static void UpgradeSceneItemsToPSX()
+    {
+        UpgradeHorrorPuzzleMaterials();
+
+        // 1. Quét tất cả PickupItem trong scene hiện tại
+        var pickups = Object.FindObjectsByType<PickupItem>(FindObjectsInactive.Include);
+        foreach (var p in pickups)
+        {
+            p.AutoDetectItemTypeFromName(); p.EnsurePSXItemVisuals();
+            EditorUtility.SetDirty(p.gameObject);
+        }
+
+        // 2. Quét các van CoolingValve trong scene
+        var valves = Object.FindObjectsByType<CoolingValve>(FindObjectsInactive.Include);
+        var valvePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/HorrorPuzzleItems/Valve/Prefabs/Valve.prefab");
+        if (valvePrefab != null)
+        {
+            foreach (var v in valves)
+            {
+                var wheel = v.transform.Find("ValveWheel");
+                if (wheel != null && wheel.Find("PSX_Valve") == null)
+                {
+                    var mr = wheel.GetComponent<MeshRenderer>();
+                    if (mr != null) mr.enabled = false;
+
+                    var inst = (GameObject)PrefabUtility.InstantiatePrefab(valvePrefab, wheel);
+                    inst.name = "PSX_Valve";
+                    inst.transform.localPosition = Vector3.zero;
+                    inst.transform.localRotation = Quaternion.identity;
+                    inst.transform.localScale = Vector3.one * 5.0f; // Kích thước gấp đôi cho van
+                    foreach (var c in inst.GetComponentsInChildren<Collider>())
+                    {
+                        Object.DestroyImmediate(c);
+                    }
+                    EditorUtility.SetDirty(wheel.gameObject);
+                }
+            }
+        }
+    }
+
     private static void FixPinkMaterials()
     {
         Shader urpLit = Shader.Find("Universal Render Pipeline/Lit");
@@ -1281,6 +1386,14 @@ public static class SceneQuickSwitcher
     private static void SetupTechWorkbenchAndWrench()
     {
         var oldWrench = GameObject.Find("Item_Wrench");
+        if (oldWrench == null)
+        {
+            var oldBat = GameObject.Find("Item_Battery");
+            if (oldBat != null && Vector3.Distance(oldBat.transform.position, new Vector3(-6f, 0f, 22f)) < 6f)
+            {
+                oldWrench = oldBat;
+            }
+        }
         Transform itemsParent = oldWrench != null ? oldWrench.transform.parent : null;
         if (itemsParent == null)
         {
@@ -1351,57 +1464,22 @@ public static class SceneQuickSwitcher
         int intLayer = LayerMask.NameToLayer("Interactable");
         wrenchGO.layer = intLayer >= 0 ? intLayer : 0;
 
-        var wrenchMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-        wrenchMat.color = new Color(0.88f, 0.90f, 0.94f);
-        wrenchMat.SetFloat("_Metallic", 0.92f);
-        wrenchMat.SetFloat("_Smoothness", 0.82f);
-
-        var modelRoot = new GameObject("WrenchModel");
-        modelRoot.transform.SetParent(wrenchGO.transform, false);
-        modelRoot.transform.localRotation = Quaternion.Euler(20f, 45f, 0f);
-
-        var handle = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        handle.name = "Handle";
-        handle.transform.SetParent(modelRoot.transform, false);
-        handle.transform.localPosition = Vector3.zero;
-        handle.transform.localScale = new Vector3(0.08f, 0.55f, 0.04f);
-        handle.GetComponent<Renderer>().material = wrenchMat;
-        Object.DestroyImmediate(handle.GetComponent<Collider>());
-
-        var headBase = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        headBase.name = "JawHead";
-        headBase.transform.SetParent(modelRoot.transform, false);
-        headBase.transform.localPosition = new Vector3(0, 0.32f, 0);
-        headBase.transform.localScale = new Vector3(0.24f, 0.04f, 0.24f);
-        headBase.GetComponent<Renderer>().material = wrenchMat;
-        Object.DestroyImmediate(headBase.GetComponent<Collider>());
-
-        var jawL = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        jawL.name = "Jaw_L";
-        jawL.transform.SetParent(modelRoot.transform, false);
-        jawL.transform.localPosition = new Vector3(-0.09f, 0.44f, 0);
-        jawL.transform.localScale = new Vector3(0.06f, 0.18f, 0.04f);
-        jawL.GetComponent<Renderer>().material = wrenchMat;
-        Object.DestroyImmediate(jawL.GetComponent<Collider>());
-
-        var jawR = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        jawR.name = "Jaw_R";
-        jawR.transform.SetParent(modelRoot.transform, false);
-        jawR.transform.localPosition = new Vector3(0.09f, 0.44f, 0);
-        jawR.transform.localScale = new Vector3(0.06f, 0.18f, 0.04f);
-        jawR.GetComponent<Renderer>().material = wrenchMat;
-        Object.DestroyImmediate(jawR.GetComponent<Collider>());
-
-        var ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        ring.name = "RingEnd";
-        ring.transform.SetParent(modelRoot.transform, false);
-        ring.transform.localPosition = new Vector3(0, -0.32f, 0);
-        ring.transform.localScale = new Vector3(0.18f, 0.038f, 0.18f);
-        ring.GetComponent<Renderer>().material = wrenchMat;
-        Object.DestroyImmediate(ring.GetComponent<Collider>());
+        var crankPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/HorrorPuzzleItems/Crank/Prefabs/Crank.prefab");
+        if (crankPrefab != null)
+        {
+            var inst = (GameObject)PrefabUtility.InstantiatePrefab(crankPrefab, wrenchGO.transform);
+            inst.name = "PSX_ModelRoot";
+            inst.transform.localPosition = Vector3.zero;
+            inst.transform.localRotation = Quaternion.Euler(30f, 45f, 0f);
+            inst.transform.localScale = Vector3.one * 6.4f; // Kích thước gấp đôi cho Cờ Lê
+            foreach (var col in inst.GetComponentsInChildren<Collider>())
+            {
+                Object.DestroyImmediate(col);
+            }
+        }
 
         var sc = wrenchGO.AddComponent<SphereCollider>();
-        sc.radius = 1.2f;
+        sc.radius = 2.5f;
         sc.isTrigger = true;
 
         var pickup = wrenchGO.AddComponent<PickupItem>();

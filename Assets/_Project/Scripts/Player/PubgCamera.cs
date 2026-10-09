@@ -84,7 +84,7 @@ public class PubgCamera : MonoBehaviour
         if (target == null) return;
 
         bool isPlaying = GameManager.Instance == null || GameManager.Instance.IsPlaying;
-        if (!isPlaying || Time.timeScale == 0f || AccessCodeUI.IsOpen || TerminalUI.IsOpen || ElevatorKeypadUI.IsOpen)
+        if (!isPlaying || Time.timeScale == 0f || AccessCodeUI.IsOpen || TerminalUI.IsOpen || ElevatorKeypadUI.IsOpen || InventoryUI.IsOpen)
         {
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
@@ -109,6 +109,8 @@ public class PubgCamera : MonoBehaviour
         }
         else if (Input.GetMouseButtonDown(0) && Cursor.lockState != CursorLockMode.Locked)
         {
+            if (InventoryUI.IsOpen) return;
+
             if (UnityEngine.EventSystems.EventSystem.current != null && 
                 UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
             {

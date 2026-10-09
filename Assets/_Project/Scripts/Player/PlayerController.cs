@@ -103,8 +103,8 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        // Khong di chuyen khi game dang tam dung hoac mo menu pause / game over
-        if (Time.timeScale == 0f) return;
+        // Khong di chuyen khi game dang tam dung, mo tui do, hoac mo menu pause / game over
+        if (Time.timeScale == 0f || InventoryUI.IsOpen) return;
         if (GameManager.Instance != null && 
            (GameManager.Instance.CurrentPhase == GameManager.GamePhase.Paused || 
             GameManager.Instance.CurrentPhase == GameManager.GamePhase.GameOver ||
