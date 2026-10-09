@@ -37,6 +37,20 @@ public class PlayerInteraction : MonoBehaviour
     private void Start()
     {
         input = FindFirstObjectByType<MobileInputController>();
+        if (interactionPromptUI == null)
+        {
+            var prompt = GameObject.Find("InteractionPrompt");
+            if (prompt == null)
+            {
+                var canvases = FindObjectsByType<Canvas>(FindObjectsInactive.Include);
+                foreach (var c in canvases)
+                {
+                    var t = c.transform.Find("InteractionPrompt");
+                    if (t != null) { prompt = t.gameObject; break; }
+                }
+            }
+            if (prompt != null) interactionPromptUI = prompt;
+        }
         if (interactionPromptUI != null)
             interactionPromptUI.SetActive(false);
     }

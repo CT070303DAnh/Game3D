@@ -102,11 +102,18 @@ public class GameState : MonoBehaviour
     private void OnEnable()
     {
         GameManager.OnGameStart += ResetState;
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
     }
 
     private void OnDisable()
     {
         GameManager.OnGameStart -= ResetState;
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    private void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
+    {
+        ResetState();
     }
 
     // ───────────────────────────────────────────────

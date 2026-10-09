@@ -27,11 +27,41 @@ public class NotificationUI : MonoBehaviour
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
 
+        if (notificationPanel == null)
+        {
+            var pnl = GameObject.Find("NotificationPanel");
+            if (pnl == null)
+            {
+                var canvases = FindObjectsByType<Canvas>(FindObjectsInactive.Include);
+                foreach (var c in canvases)
+                {
+                    var t = c.transform.Find("NotificationPanel");
+                    if (t != null) { pnl = t.gameObject; break; }
+                }
+            }
+            if (pnl != null) notificationPanel = pnl;
+        }
+        if (messageText == null && notificationPanel != null)
+        {
+            messageText = notificationPanel.GetComponentInChildren<Text>(true);
+        }
+
         canvasGroup = notificationPanel?.GetComponent<CanvasGroup>();
         if (canvasGroup == null && notificationPanel != null)
             canvasGroup = notificationPanel.AddComponent<CanvasGroup>();
 
         if (notificationPanel != null) notificationPanel.SetActive(false);
+    }
+
+    public void SetNotificationReferences(GameObject panel, Text text)
+    {
+        notificationPanel = panel;
+        messageText = text;
+        if (panel != null)
+        {
+            canvasGroup = panel.GetOrAddComponent<CanvasGroup>();
+            panel.SetActive(false);
+        }
     }
 
     /// <summary>Static shortcut de goi tu bat ky script nao.</summary>

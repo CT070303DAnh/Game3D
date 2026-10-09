@@ -13,7 +13,7 @@ public class PlayerHealth : MonoBehaviour
     // ───────────────────────────────────────────────
     [Header("Health Settings")]
     [SerializeField] private int maxHealth = 100;
-    [SerializeField] private float invincibleDuration = 1.5f; // Thoi gian bat tu sau khi bi damage
+    [SerializeField] private float invincibleDuration = 0.6f; // Thoi gian bat tu ngan (0.6s) de khong can tro nhip danh tiep theo
 
     // ───────────────────────────────────────────────
     // Runtime State
@@ -120,11 +120,36 @@ public class PlayerHealth : MonoBehaviour
     {
         if (isDead) return;
         isDead = true;
+        currentHealth = 0;
         Debug.Log("[PlayerHealth] Player died.");
-        OnPlayerDied?.Invoke();
 
-        // Bao GameManager
-        if (GameManager.Instance != null)
-            GameManager.Instance.TriggerGameOver();
+        // 1. Báo GameManager TRƯỚC (để các hệ thống khác biết đã Game Over)
+        try
+        {
+            if (GameManager.Instance != null)
+                GameManager.Instance.TriggerGameOver();
+        }
+        catch (System.Exception e) { Debug.LogWarning(e); }
+
+        // 2. Khóa điều khiển người chơi ngay lập tức
+        var pc = GetComponent<PlayerController>();
+        if (pc != null) pc.enabled = false;
+
+        // 3. Phát event (bọc try/catch để 1 listener lỗi không chặn Game Over)
+        try { OnPlayerDied?.Invoke(); }
+        catch (System.Exception e) { Debug.LogWarning(e); }
+
+        // 4. Luôn đảm bảo popup Game Over hiển thị và game dừng lại
+        bool shown = false;
+        try { shown = GameplayUI.ForceShowGameOver(); }
+        catch (System.Exception e) { Debug.LogWarning(e); }
+
+        if (!shown)
+        {
+            Debug.LogWarning("[PlayerHealth] Không tìm thấy GameplayUI để hiện Game Over -> dừng game.");
+        }
+        Time.timeScale = 0f;
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
     }
 }

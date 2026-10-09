@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+﻿#if UNITY_EDITOR
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEditor;
@@ -69,6 +69,28 @@ public static class SceneQuickSwitcher
         SyncAllScenes(true);
     }
 
+    [MenuItem("EscapeTheLab/💡 Tối Ưu Ánh Sáng Màn 1 (Đều, Đẹp, Không Chói)", false, 15)]
+    public static void MenuOptimizeLabLighting()
+    {
+        var scene = EditorSceneManager.GetActiveScene();
+        if (!scene.name.Contains("Lab"))
+        {
+            if (File.Exists(SCENE_LEVEL1)) EditorSceneManager.OpenScene(SCENE_LEVEL1);
+            scene = EditorSceneManager.GetActiveScene();
+        }
+        OptimizeLabLighting(scene);
+        SyncCurrentSceneUI();
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        EditorUtility.DisplayDialog("Thành Công",
+            "ĐÃ TỐI ƯU HÓA TOÀN BỘ ÁNH SÁNG MÀN 1!\n\n" +
+            "• Ánh sáng đồng đều, êm dịu: Không còn vùng tối mù mịt hay vệt chói gắt.\n" +
+            "• Không còn cháy trần: Đèn LED âm trần thẩm mỹ cách xa trần (cường độ chuẩn 1.6f).\n" +
+            "• Bóng đổ một hướng: Duy nhất 1 Directional Light chính tạo bóng đổ mềm mại, xóa bỏ bóng đổ chằng chịt nhiều hướng.\n" +
+            "• Thanh máu & HUD: Đồng bộ chuẩn Màn 2, nổi rõ chữ HP: 100 / 100.",
+            "Tuyệt Vời!");
+    }
+
     [MenuItem("EscapeTheLab/🔧 Cập nhật Màn 2 (Cờ Lê & Làn Hơi)", false, 20)]
     public static void MenuUpgradeLevel2()
     {
@@ -80,8 +102,8 @@ public static class SceneQuickSwitcher
     {
         EditorApplication.delayCall += () =>
         {
-            if (SessionState.GetBool("AllScenes_AutoSynced_V2", false)) return;
-            SessionState.SetBool("AllScenes_AutoSynced_V2", true);
+            if (SessionState.GetBool("AllScenes_AutoSynced_V6", false)) return;
+            SessionState.SetBool("AllScenes_AutoSynced_V6", true);
             SyncAllScenes(false);
         };
     }
@@ -147,42 +169,151 @@ public static class SceneQuickSwitcher
     /// - Ẩn nút E, Run ảo
     /// - Tích hợp InventoryUI với phím TAB
     /// </summary>
+    /// <summary>
+    /// Đồng bộ hóa UI và Hệ Thống cho Scene hiện đang mở:
+    /// - GameplayCanvas độc lập luôn hiển thị (HP, Objective, InteractionPrompt, Notification, Túi Đồ TAB, Crosshair)
+    /// - Ẩn hoàn toàn các nút ảo cảm ứng (MobileInputCanvas, InteractButton, RunButton, Joystick)
+    /// - Robot AI: Đứng thẳng, gán AnimationController tuần hoàn không bị nằm chết, Rigidbody Kinematic, Giật điện -5 HP
+    /// - Sửa các vật liệu màu hồng tím (URP Shader)
+    /// </summary>
     public static void SyncCurrentSceneUI()
     {
         var scene = EditorSceneManager.GetActiveScene();
         if (scene.name.Contains("MainMenu")) return;
 
-        // 1. Tìm hoặc kiểm tra GameplayCanvas
+        EnsureEventSystem();
+
+        // 1. Tìm hoặc TẠO GameplayCanvas độc lập
         Canvas gameplayCanvas = null;
         var canvases = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include);
         foreach (var c in canvases)
         {
-            if (c.name.Contains("Gameplay") || c.GetComponent<GameplayUI>() != null)
+            if (c.name == "GameplayCanvas" || c.name.Contains("Gameplay"))
             {
                 gameplayCanvas = c;
                 break;
             }
         }
 
-        if (gameplayCanvas != null)
+        if (gameplayCanvas == null)
         {
-            var gpUI = gameplayCanvas.GetComponent<GameplayUI>();
-            if (gpUI == null) gpUI = gameplayCanvas.gameObject.AddComponent<GameplayUI>();
+            var canvasGO = new GameObject("GameplayCanvas");
+            gameplayCanvas = canvasGO.AddComponent<Canvas>();
+            gameplayCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            gameplayCanvas.sortingOrder = 10;
 
-            // Đồng bộ thanh máu HP chuẩn Màn 2
-            SyncHealthBarVisuals(gameplayCanvas.transform);
+            var scaler = canvasGO.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.matchWidthOrHeight = 0.5f;
 
-            // Đồng bộ Túi Đồ TAB
-            var invUI = gameplayCanvas.GetComponent<InventoryUI>();
-            if (invUI == null) invUI = gameplayCanvas.gameObject.AddComponent<InventoryUI>();
-            invUI.EnsureInventoryPanel();
-
-            EditorUtility.SetDirty(gameplayCanvas.gameObject);
+            canvasGO.AddComponent<GraphicRaycaster>();
+            canvasGO.AddComponent<GameplayUI>();
+            canvasGO.AddComponent<InventoryUI>();
         }
 
-        // 2. Ẩn hoàn toàn các nút ảo cảm ứng (MobileInputCanvas, InteractButton, RunButton, Joystick)
+        // Đảm bảo GameplayCanvas luôn bật
+        gameplayCanvas.enabled = true;
+        gameplayCanvas.gameObject.SetActive(true);
+
+        // 2. Tiêu diệt TẤT CẢ GameplayUI thừa trong Scene (chỉ giữ duy nhất 1 GameplayUI trên GameplayCanvas)
+        var allGPUI = Object.FindObjectsByType<GameplayUI>(FindObjectsInactive.Include);
+        foreach (var ui in allGPUI)
+        {
+            if (ui.gameObject != gameplayCanvas.gameObject)
+            {
+                Object.DestroyImmediate(ui);
+            }
+        }
+
+        // 3. Tiêu diệt triệt để các panel trùng lặp trên các canvas khác (như MobileInputCanvas)
+        string[] hudNames = new string[] {
+            "HPPanel", "ObjectivePanel", "NotificationPanel", "InteractionPrompt",
+            "HUD_Crosshair", "InventoryPanel", "TerminalUIPanel", "AccessCodeUIPanel",
+            "WinPanel", "GameOverPanel"
+        };
+
         foreach (var c in canvases)
         {
+            if (c == gameplayCanvas || c == null) continue;
+            foreach (var hName in hudNames)
+            {
+                var childTrans = c.transform.Find(hName);
+                if (childTrans != null)
+                {
+                    if (gameplayCanvas.transform.Find(hName) == null)
+                    {
+                        childTrans.SetParent(gameplayCanvas.transform, false);
+                    }
+                    else
+                    {
+                        Object.DestroyImmediate(childTrans.gameObject);
+                    }
+                }
+            }
+        }
+
+        // Xóa sạch các GameObject trùng lặp ngoài GameplayCanvas
+        var allTransforms = Object.FindObjectsByType<Transform>(FindObjectsInactive.Include);
+        foreach (var t in allTransforms)
+        {
+            if (t == null) continue;
+            if (t.name == "HPPanel" && t.parent != gameplayCanvas.transform)
+            {
+                Object.DestroyImmediate(t.gameObject);
+            }
+            else if (t.name == "ObjectivePanel" && t.parent != gameplayCanvas.transform)
+            {
+                Object.DestroyImmediate(t.gameObject);
+            }
+        }
+
+        // Xóa duplicate HPPanel và ObjectivePanel bên trong GameplayCanvas (nếu có nhiều hơn 1)
+        for (int i = gameplayCanvas.transform.childCount - 1; i >= 0; i--)
+        {
+            var child = gameplayCanvas.transform.GetChild(i);
+            if (child.name == "HPPanel")
+            {
+                int firstIdx = -1;
+                for (int j = 0; j < gameplayCanvas.transform.childCount; j++)
+                {
+                    if (gameplayCanvas.transform.GetChild(j).name == "HPPanel") { firstIdx = j; break; }
+                }
+                if (i != firstIdx) Object.DestroyImmediate(child.gameObject);
+            }
+            else if (child.name == "ObjectivePanel")
+            {
+                int firstIdx = -1;
+                for (int j = 0; j < gameplayCanvas.transform.childCount; j++)
+                {
+                    if (gameplayCanvas.transform.GetChild(j).name == "ObjectivePanel") { firstIdx = j; break; }
+                }
+                if (i != firstIdx) Object.DestroyImmediate(child.gameObject);
+            }
+        }
+
+        var gpUI = gameplayCanvas.gameObject.GetOrAddComponent<GameplayUI>();
+        var invUI = gameplayCanvas.gameObject.GetOrAddComponent<InventoryUI>();
+
+        // Đồng bộ toàn bộ các thành phần visual của GameplayUI
+        SyncHealthBarVisuals(gameplayCanvas.transform);
+        SyncObjectivePanelVisuals(gameplayCanvas.transform);
+        SyncInteractionPromptVisuals(gameplayCanvas.transform);
+        SyncNotificationVisuals(gameplayCanvas.transform);
+        SyncCrosshairVisuals(gameplayCanvas.transform);
+        invUI.EnsureInventoryPanel();
+        gpUI.EnsureGameOverPanel();
+        gpUI.EnsureWinPanel();
+
+        // Đồng bộ PlayerInteraction & NotificationUI
+        SyncPlayerInteractionReferences(gameplayCanvas.transform);
+
+        EditorUtility.SetDirty(gameplayCanvas.gameObject);
+
+        // 3. Ẩn hoàn toàn các nút ảo cảm ứng
+        foreach (var c in Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include))
+        {
+            if (c == gameplayCanvas) continue;
             if (c.name.Contains("Mobile") || c.name.Contains("Touch"))
             {
                 c.enabled = false;
@@ -198,7 +329,6 @@ public static class SceneQuickSwitcher
             EditorUtility.SetDirty(mic.gameObject);
         }
 
-        // Tìm thêm các nút bấm ảo riêng rẽ nếu còn sót
         var buttons = Object.FindObjectsByType<Button>(FindObjectsInactive.Include);
         foreach (var btn in buttons)
         {
@@ -210,34 +340,309 @@ public static class SceneQuickSwitcher
             }
         }
 
-        // 3. Đồng bộ cơ chế Điện Giật -5 Máu cho Robot AI ở Màn 1 & Màn 2
-        SyncRobotElectricShock();
+        // 4. Đồng bộ Robot AI (Đứng thẳng, Animator controller không bị chết, Kinematic, Giật điện -5 HP)
+        SyncRobots();
+
+        // 5. Khắc phục vật liệu màu hồng tím (URP shader)
+        FixPinkMaterials();
+
+        // 6. Tối ưu hóa ánh sáng Màn 1 (Phòng Thí Nghiệm): loại bỏ đèn cháy trần, tạo ánh sáng êm dịu đồng đều
+        if (scene.name.Contains("Lab") && !scene.name.Contains("Reactor") && !scene.name.Contains("Helipad"))
+        {
+            OptimizeLabLighting(scene);
+        }
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
     }
 
-    /// <summary>
-    /// Đồng bộ cấu hình Điện Giật -5 Máu khi chạm vào Robot AI.
-    /// </summary>
-    private static void SyncRobotElectricShock()
+    private static void EnsureEventSystem()
     {
+        if (Object.FindFirstObjectByType<UnityEngine.EventSystems.EventSystem>() == null)
+        {
+            var esGO = new GameObject("EventSystem");
+            esGO.AddComponent<UnityEngine.EventSystems.EventSystem>();
+            esGO.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+        }
+    }
+
+    private static void SyncObjectivePanelVisuals(Transform canvasRoot)
+    {
+        Transform objTrans = canvasRoot.Find("ObjectivePanel");
+        if (objTrans == null)
+        {
+            var pGO = new GameObject("ObjectivePanel");
+            pGO.transform.SetParent(canvasRoot, false);
+            objTrans = pGO.transform;
+        }
+
+        var objPnl = objTrans.gameObject;
+        objPnl.SetActive(true);
+
+        var pnlR = objPnl.GetOrAddComponent<RectTransform>();
+        pnlR.anchorMin = new Vector2(1f, 1f);
+        pnlR.anchorMax = new Vector2(1f, 1f);
+        pnlR.pivot = new Vector2(1f, 1f);
+        pnlR.anchoredPosition = new Vector2(-20f, -20f);
+        pnlR.sizeDelta = new Vector2(340f, 85f);
+
+        var pnlImg = objPnl.GetOrAddComponent<Image>();
+        pnlImg.color = new Color(0.06f, 0.08f, 0.12f, 0.92f);
+        pnlImg.raycastTarget = false;
+
+        var ol = objPnl.GetOrAddComponent<Outline>();
+        ol.effectColor = new Color(0.1f, 0.5f, 0.9f, 0.7f);
+        ol.effectDistance = new Vector2(1.5f, -1.5f);
+
+        // Xóa sạch mọi Text thừa để tránh hiện tượng chữ đè chữ
+        Text keeperTxt = null;
+        var allTxts = objTrans.GetComponentsInChildren<Text>(true);
+        foreach (var t in allTxts)
+        {
+            if (keeperTxt == null && (t.name == "ObjectiveText" || t.name == "Text"))
+            {
+                keeperTxt = t;
+                keeperTxt.name = "ObjectiveText";
+            }
+            else
+            {
+                Object.DestroyImmediate(t.gameObject);
+            }
+        }
+
+        Transform txtTrans = keeperTxt != null ? keeperTxt.transform : objTrans.Find("ObjectiveText");
+        if (txtTrans == null)
+        {
+            var tGO = new GameObject("ObjectiveText");
+            tGO.transform.SetParent(objTrans, false);
+            txtTrans = tGO.transform;
+        }
+
+        var objTxt = txtTrans.gameObject.GetOrAddComponent<Text>();
+        objTxt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        objTxt.fontSize = 15;
+        objTxt.fontStyle = FontStyle.Normal;
+        objTxt.alignment = TextAnchor.MiddleCenter;
+        objTxt.color = Color.white;
+        objTxt.raycastTarget = false;
+        objTxt.text = "OBJECTIVE\nTìm Thẻ Bảo Mật (Security Card - Phòng B)";
+
+        RectTransform txtR = txtTrans.gameObject.GetOrAddComponent<RectTransform>();
+        txtR.anchorMin = Vector2.zero;
+        txtR.anchorMax = Vector2.one;
+        txtR.offsetMin = new Vector2(10, 10);
+        txtR.offsetMax = new Vector2(-10, -10);
+
+        var gpUI = canvasRoot.GetComponent<GameplayUI>();
+        if (gpUI != null)
+        {
+            var so = new SerializedObject(gpUI);
+            var spPnl = so.FindProperty("objectivePanel");
+            var spTxt = so.FindProperty("objectiveText");
+            if (spPnl != null) spPnl.objectReferenceValue = objPnl;
+            if (spTxt != null) spTxt.objectReferenceValue = objTxt;
+            so.ApplyModifiedProperties();
+        }
+    }
+
+    private static void SyncInteractionPromptVisuals(Transform canvasRoot)
+    {
+        Transform promptTrans = canvasRoot.Find("InteractionPrompt");
+        if (promptTrans == null)
+        {
+            var pGO = new GameObject("InteractionPrompt");
+            pGO.transform.SetParent(canvasRoot, false);
+            promptTrans = pGO.transform;
+        }
+
+        var promptPnl = promptTrans.gameObject;
+        var pnlR = promptPnl.GetOrAddComponent<RectTransform>();
+        pnlR.anchorMin = new Vector2(0.5f, 0f);
+        pnlR.anchorMax = new Vector2(0.5f, 0f);
+        pnlR.pivot = new Vector2(0.5f, 0f);
+        pnlR.anchoredPosition = new Vector2(0f, 160f);
+        pnlR.sizeDelta = new Vector2(400f, 54f);
+
+        var pnlImg = promptPnl.GetOrAddComponent<Image>();
+        pnlImg.color = new Color(0.05f, 0.08f, 0.15f, 0.94f);
+        pnlImg.raycastTarget = false;
+
+        var ol = promptPnl.GetOrAddComponent<Outline>();
+        ol.effectColor = new Color(0f, 0.85f, 1f, 0.85f);
+        ol.effectDistance = new Vector2(1.5f, -1.5f);
+
+        Transform txtTrans = promptTrans.Find("PromptText") ?? promptTrans.Find("Text");
+        if (txtTrans == null)
+        {
+            var tGO = new GameObject("PromptText");
+            tGO.transform.SetParent(promptTrans, false);
+            txtTrans = tGO.transform;
+        }
+
+        var promptTxt = txtTrans.gameObject.GetOrAddComponent<Text>();
+        promptTxt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        promptTxt.fontSize = 17;
+        promptTxt.fontStyle = FontStyle.Bold;
+        promptTxt.alignment = TextAnchor.MiddleCenter;
+        promptTxt.color = new Color(1f, 0.92f, 0.3f);
+        promptTxt.raycastTarget = false;
+
+        RectTransform txtR = txtTrans.gameObject.GetOrAddComponent<RectTransform>();
+        txtR.anchorMin = Vector2.zero;
+        txtR.anchorMax = Vector2.one;
+        txtR.offsetMin = Vector2.zero;
+        txtR.offsetMax = Vector2.zero;
+
+        promptPnl.SetActive(false);
+
+        var gpUI = canvasRoot.GetComponent<GameplayUI>();
+        if (gpUI != null)
+        {
+            var so = new SerializedObject(gpUI);
+            var spPnl = so.FindProperty("interactionPromptPanel");
+            var spTxt = so.FindProperty("interactionPromptText");
+            if (spPnl != null) spPnl.objectReferenceValue = promptPnl;
+            if (spTxt != null) spTxt.objectReferenceValue = promptTxt;
+            so.ApplyModifiedProperties();
+        }
+    }
+
+    private static void SyncNotificationVisuals(Transform canvasRoot)
+    {
+        Transform notifTrans = canvasRoot.Find("NotificationPanel");
+        if (notifTrans == null)
+        {
+            var pGO = new GameObject("NotificationPanel");
+            pGO.transform.SetParent(canvasRoot, false);
+            notifTrans = pGO.transform;
+        }
+
+        var pnl = notifTrans.gameObject;
+        var pnlR = pnl.GetOrAddComponent<RectTransform>();
+        pnlR.anchorMin = new Vector2(0.5f, 1f);
+        pnlR.anchorMax = new Vector2(0.5f, 1f);
+        pnlR.pivot = new Vector2(0.5f, 1f);
+        pnlR.anchoredPosition = new Vector2(0f, -90f);
+        pnlR.sizeDelta = new Vector2(540f, 60f);
+
+        var pnlImg = pnl.GetOrAddComponent<Image>();
+        pnlImg.color = new Color(0.04f, 0.12f, 0.25f, 0.95f);
+        pnlImg.raycastTarget = false;
+
+        var ol = pnl.GetOrAddComponent<Outline>();
+        ol.effectColor = new Color(0f, 0.8f, 1f, 0.9f);
+        ol.effectDistance = new Vector2(1.5f, -1.5f);
+
+        Transform txtTrans = notifTrans.Find("NotifText") ?? notifTrans.Find("Text");
+        if (txtTrans == null)
+        {
+            var tGO = new GameObject("NotifText");
+            tGO.transform.SetParent(notifTrans, false);
+            txtTrans = tGO.transform;
+        }
+
+        var txt = txtTrans.gameObject.GetOrAddComponent<Text>();
+        txt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        txt.fontSize = 17;
+        txt.fontStyle = FontStyle.Bold;
+        txt.alignment = TextAnchor.MiddleCenter;
+        txt.color = Color.white;
+        txt.raycastTarget = false;
+
+        RectTransform txtR = txtTrans.gameObject.GetOrAddComponent<RectTransform>();
+        txtR.anchorMin = Vector2.zero;
+        txtR.anchorMax = Vector2.one;
+        txtR.offsetMin = Vector2.zero;
+        txtR.offsetMax = Vector2.zero;
+
+        var cg = pnl.GetOrAddComponent<CanvasGroup>();
+        cg.alpha = 0f;
+        pnl.SetActive(false);
+
+        NotificationUI nui = Object.FindAnyObjectByType<NotificationUI>(FindObjectsInactive.Include);
+        if (nui == null)
+        {
+            var nuiGO = new GameObject("NotificationUI");
+            nuiGO.transform.SetParent(canvasRoot, false);
+            nui = nuiGO.AddComponent<NotificationUI>();
+        }
+        nui.SetNotificationReferences(pnl, txt);
+        var soNui = new SerializedObject(nui);
+        var spPnl = soNui.FindProperty("notificationPanel");
+        var spTxt = soNui.FindProperty("messageText");
+        if (spPnl != null) spPnl.objectReferenceValue = pnl;
+        if (spTxt != null) spTxt.objectReferenceValue = txt;
+        soNui.ApplyModifiedProperties();
+        EditorUtility.SetDirty(nui);
+    }
+
+    private static void SyncCrosshairVisuals(Transform canvasRoot)
+    {
+        Transform crosshairTrans = canvasRoot.Find("HUD_Crosshair");
+        if (crosshairTrans == null)
+        {
+            var chGO = new GameObject("HUD_Crosshair");
+            chGO.transform.SetParent(canvasRoot, false);
+            var rt = chGO.AddComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0.5f, 0.5f);
+            rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = new Vector2(8, 8);
+            rt.anchoredPosition = Vector2.zero;
+
+            var img = chGO.AddComponent<Image>();
+            img.color = new Color(1f, 1f, 1f, 0.9f);
+            img.raycastTarget = false;
+
+            var ol = chGO.AddComponent<Outline>();
+            ol.effectColor = new Color(0, 0, 0, 0.8f);
+            ol.effectDistance = new Vector2(1f, -1f);
+        }
+    }
+
+    private static void SyncPlayerInteractionReferences(Transform canvasRoot)
+    {
+        var pi = Object.FindAnyObjectByType<PlayerInteraction>(FindObjectsInactive.Include);
+        if (pi != null)
+        {
+            Transform promptTrans = canvasRoot.Find("InteractionPrompt");
+            if (promptTrans != null)
+            {
+                var so = new SerializedObject(pi);
+                var prop = so.FindProperty("interactionPromptUI");
+                if (prop != null)
+                {
+                    prop.objectReferenceValue = promptTrans.gameObject;
+                    so.ApplyModifiedProperties();
+                }
+            }
+            EditorUtility.SetDirty(pi);
+        }
+    }
+
+    /// <summary>
+    /// Đồng bộ cấu hình Robot AI: Đứng thẳng, Animator controller không bị chết, Rigidbody kinematic, Điện Giật -5 Máu.
+    /// </summary>
+    private static void SyncRobots()
+    {
+        var animController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>("Assets/SciFiWarriorPBRHPPolyart/Animators/SciFiWarrior.controller");
+
         var robots = Object.FindObjectsByType<RobotAI>(FindObjectsInactive.Include);
         foreach (var r in robots)
         {
-            var so = new SerializedObject(r);
-            var spEnable = so.FindProperty("enableShockOnTouch");
-            var spDmg = so.FindProperty("shockDamage");
-            var spDist = so.FindProperty("shockTouchDistance");
-            var spCd = so.FindProperty("shockCooldown");
+            // 1. Đứng thẳng, không bị nghiêng ngã
+            Vector3 curEuler = r.transform.eulerAngles;
+            r.transform.eulerAngles = new Vector3(0f, curEuler.y, 0f);
 
-            if (spEnable != null) spEnable.boolValue = true;
-            if (spDmg != null) spDmg.intValue = 5;
-            if (spDist != null) spDist.floatValue = 1.35f;
-            if (spCd != null) spCd.floatValue = 1.0f;
-            so.ApplyModifiedProperties();
+            // 2. Animator controller
+            var anim = r.GetComponent<Animator>();
+            if (anim != null && animController != null)
+            {
+                anim.runtimeAnimatorController = animController;
+                anim.applyRootMotion = false;
+            }
 
-            // Đảm bảo có Trigger Collider và Kinematic Rigidbody
+            // 3. Trigger Collider và Kinematic Rigidbody
             var colliders = r.GetComponents<Collider>();
             bool hasTrigger = false;
             foreach (var col in colliders)
@@ -256,12 +661,261 @@ public static class SceneQuickSwitcher
             if (rb == null)
             {
                 rb = r.gameObject.AddComponent<Rigidbody>();
-                rb.isKinematic = true;
-                rb.useGravity = false;
             }
+            rb.isKinematic = true;
+            rb.useGravity = false;
+            rb.constraints = RigidbodyConstraints.FreezeAll;
+
+            // 4. Điện giật -5 Máu
+            var so = new SerializedObject(r);
+            var spEnable = so.FindProperty("enableShockOnTouch");
+            var spDmg = so.FindProperty("shockDamage");
+            var spDist = so.FindProperty("shockTouchDistance");
+            var spCd = so.FindProperty("shockCooldown");
+
+            var spAtk = so.FindProperty("attackDamage");
+            if (spEnable != null) spEnable.boolValue = true;
+            if (spDmg != null) spDmg.intValue = 5;
+            if (spAtk != null) spAtk.intValue = 20;
+            if (spDist != null) spDist.floatValue = 1.35f;
+            if (spCd != null) spCd.floatValue = 1.0f;
+            so.ApplyModifiedProperties();
 
             EditorUtility.SetDirty(r.gameObject);
         }
+    }
+
+    /// <summary>
+    /// Sửa các vật liệu màu hồng tím (Pink Shader Error) sang URP Shader tương thích.
+    /// </summary>
+    private static void FixPinkMaterials()
+    {
+        Shader urpLit = Shader.Find("Universal Render Pipeline/Lit");
+        Shader urpParticlesUnlit = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+        if (urpParticlesUnlit == null) urpParticlesUnlit = Shader.Find("Universal Render Pipeline/Unlit");
+
+        string[] leafMats = new string[] {
+            "Assets/Sci-Fi Styled Modular Pack/Materials/nature_leaves.mat",
+            "Assets/Sci-Fi Styled Modular Pack/Materials/nature_bush.mat"
+        };
+
+        foreach (var p in leafMats)
+        {
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(p);
+            if (mat != null && urpLit != null)
+            {
+                mat.shader = urpLit;
+                mat.SetFloat("_AlphaClip", 1f);
+                mat.SetFloat("_Cutoff", 0.4f);
+                mat.EnableKeyword("_ALPHATEST_ON");
+                EditorUtility.SetDirty(mat);
+            }
+        }
+
+        var holo = AssetDatabase.LoadAssetAtPath<Material>("Assets/Sci-Fi Styled Modular Pack/Materials/hologram_particle.mat");
+        if (holo != null && urpParticlesUnlit != null)
+        {
+            holo.shader = urpParticlesUnlit;
+            EditorUtility.SetDirty(holo);
+        }
+
+        // Quét thêm bất kỳ material nào trong scene đang có shader bị lỗi (Hidden/InternalErrorShader)
+        var renderers = Object.FindObjectsByType<Renderer>(FindObjectsInactive.Include);
+        foreach (var rend in renderers)
+        {
+            foreach (var m in rend.sharedMaterials)
+            {
+                if (m != null && m.shader != null && (m.shader.name.Contains("Error") || m.shader.name.StartsWith("Hidden/")))
+                {
+                    if (urpLit != null)
+                    {
+                        m.shader = urpLit;
+                        EditorUtility.SetDirty(m);
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Tối ưu hóa toàn diện hệ thống ánh sáng Màn 1 (Phòng Thí Nghiệm):
+    /// - Loại bỏ hoàn toàn các đèn rọi cũ cường độ quá mạnh (28-30 intensity), đèn trùng lặp gây cháy trần & bóng đổ rối mắt.
+    /// - Ambient Light dịu mắt, đồng đều: không còn bất kỳ góc tối mù mịt hay vệt chói loá nào.
+    /// - Duy nhất 1 Directional Key Light với Soft Shadow tinh tế (shadowStrength = 0.35), giúp mọi bóng đổ tự nhiên theo một hướng thống nhất.
+    /// - 13 bộ đèn LED âm trần Sci-Fi được căn chỉnh chuẩn xác: Y = 3.85m (cách xa trần), intensity = 1.6f, range = 14m, không đổ bóng đa hướng (shadows = None).
+    /// </summary>
+    public static void OptimizeLabLighting(UnityEngine.SceneManagement.Scene scene)
+    {
+        // 1. Cấu hình Ambient Light môi trường sạch sẽ, dịu mắt, hiện rõ mọi chi tiết
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+        RenderSettings.ambientLight = new Color(0.42f, 0.45f, 0.50f); // Tông xám bạc sci-fi phòng thí nghiệm
+
+        // 2. Thiết lập DUY NHẤT 1 Directional Light chính, tạo bóng đổ tự nhiên một hướng
+        var allLights = Object.FindObjectsByType<Light>(FindObjectsInactive.Include);
+        Light mainDirLight = null;
+        foreach (var l in allLights)
+        {
+            if (l.type == LightType.Directional)
+            {
+                if (mainDirLight == null)
+                {
+                    mainDirLight = l;
+                    mainDirLight.name = "Directional_Lab_Light";
+                }
+                else
+                {
+                    Undo.DestroyObjectImmediate(l.gameObject);
+                }
+            }
+        }
+
+        if (mainDirLight == null)
+        {
+            var dirGO = new GameObject("Directional_Lab_Light");
+            mainDirLight = dirGO.AddComponent<Light>();
+            mainDirLight.type = LightType.Directional;
+        }
+
+        mainDirLight.color = new Color(0.94f, 0.97f, 1.0f);
+        mainDirLight.intensity = 0.85f;
+        mainDirLight.transform.rotation = Quaternion.Euler(52f, -32f, 0f);
+        mainDirLight.shadows = LightShadows.Soft;
+        mainDirLight.shadowStrength = 0.35f; // Bóng mờ nhẹ, không làm đen kịt mặt sàn hay chân ghế
+        mainDirLight.shadowBias = 0.05f;
+        mainDirLight.shadowNormalBias = 0.4f;
+        EditorUtility.SetDirty(mainDirLight.gameObject);
+
+        // 3. Tìm hoặc làm mới Lighting Group trong === LAB ENVIRONMENT ===
+        var envRoot = GameObject.Find("=== LAB ENVIRONMENT ===");
+        Transform lightsParent = null;
+        if (envRoot != null)
+        {
+            var oldLighting = envRoot.transform.Find("Lighting");
+            if (oldLighting != null)
+            {
+                Undo.DestroyObjectImmediate(oldLighting.gameObject);
+            }
+            var oldLights = envRoot.transform.Find("Lights");
+            if (oldLights != null)
+            {
+                Undo.DestroyObjectImmediate(oldLights.gameObject);
+            }
+
+            var lightsGO = new GameObject("Lighting");
+            lightsGO.transform.SetParent(envRoot.transform, false);
+            lightsParent = lightsGO.transform;
+        }
+        else
+        {
+            var lightsGO = GameObject.Find("Lab_Lighting_System");
+            if (lightsGO != null) Undo.DestroyObjectImmediate(lightsGO);
+            lightsGO = new GameObject("Lab_Lighting_System");
+            lightsParent = lightsGO.transform;
+        }
+
+        // Xóa bất kỳ CeilingLamp hoặc Point Light cũ cường độ cao trôi nổi nào trong scene
+        var strayLights = Object.FindObjectsByType<Light>(FindObjectsInactive.Include);
+        foreach (var sl in strayLights)
+        {
+            if (sl == null || sl == mainDirLight) continue;
+            string n = sl.gameObject.name.ToLower();
+            if (n.Contains("ceilinglamp") || n.Contains("lamppoint") || (sl.type == LightType.Point && sl.intensity > 4.5f))
+            {
+                Undo.DestroyObjectImmediate(sl.gameObject);
+            }
+        }
+
+        // 4. Sinh các đèn LED Panel âm trần sang trọng, phân bổ đều khắp các phòng:
+        // Chiều cao Y = 3.85m (cách trần phòng 1.15m, tránh hoàn toàn hiện tượng cháy/chói trần)
+        Color coolLabLight = new Color(0.88f, 0.95f, 1.0f);
+        Color serverBlueLight = new Color(0.75f, 0.90f, 1.0f);
+        Color machineGreenLight = new Color(0.82f, 0.98f, 0.88f);
+        Color exitWarmLight = new Color(0.98f, 0.94f, 0.88f);
+
+        // A. Sảnh chính (Main Hall: 20x24m) - 5 đèn bố trí đều đặn, cân đối
+        CreateModernLabLamp(lightsParent, new Vector3(-5f, 3.85f, -5f), coolLabLight);
+        CreateModernLabLamp(lightsParent, new Vector3( 5f, 3.85f, -5f), coolLabLight);
+        CreateModernLabLamp(lightsParent, new Vector3(-5f, 3.85f,  5f), coolLabLight);
+        CreateModernLabLamp(lightsParent, new Vector3( 5f, 3.85f,  5f), coolLabLight);
+        CreateModernLabLamp(lightsParent, new Vector3( 0f, 3.85f,  0f), coolLabLight);
+
+        // B. Phòng A - Máy Móc (X=-16, 12x16m) - 2 đèn phân bổ trục giữa
+        CreateModernLabLamp(lightsParent, new Vector3(-16f, 3.85f,  6f), machineGreenLight);
+        CreateModernLabLamp(lightsParent, new Vector3(-16f, 3.85f, -2f), machineGreenLight);
+
+        // C. Phòng B - Máy Chủ Server (X=16, 12x16m) - 2 đèn phân bổ trục giữa
+        CreateModernLabLamp(lightsParent, new Vector3(16f, 3.85f,  6f), serverBlueLight);
+        CreateModernLabLamp(lightsParent, new Vector3(16f, 3.85f, -2f), serverBlueLight);
+
+        // D. Phòng C - Cửa Thoát Hiểm (Z=20, 14x10m) - 2 đèn
+        CreateModernLabLamp(lightsParent, new Vector3(-3.5f, 3.85f, 20f), exitWarmLight);
+        CreateModernLabLamp(lightsParent, new Vector3( 3.5f, 3.85f, 20f), exitWarmLight);
+
+        // E. Hai hành lang kết nối (Corridor A & B) & Hành lang cửa thoát
+        CreateModernLabLamp(lightsParent, new Vector3(-9.5f, 3.85f, 4f), coolLabLight);
+        CreateModernLabLamp(lightsParent, new Vector3( 9.5f, 3.85f, 4f), coolLabLight);
+        CreateModernLabLamp(lightsParent, new Vector3(  0f,  3.85f, 13f), coolLabLight);
+
+        // 5. Đèn cảnh báo Robot Alert Light (mặc định tắt, chỉ nháy khi báo động)
+        var alertGO = new GameObject("RobotAlertLight");
+        alertGO.transform.SetParent(lightsParent, false);
+        alertGO.transform.position = new Vector3(0, 4.0f, 0);
+        var al = alertGO.AddComponent<Light>();
+        al.type = LightType.Point;
+        al.color = Color.red;
+        al.intensity = 0f;
+        al.range = 25f;
+        al.shadows = LightShadows.None;
+
+        Debug.Log("<color=cyan>[SceneQuickSwitcher] Đã tối ưu hóa hệ thống ánh sáng Màn 1: Phân bổ đều, êm dịu, loại bỏ triệt để các khoảng tối/sáng bất thường!</color>");
+    }
+
+    private static void CreateModernLabLamp(Transform parent, Vector3 pos, Color col)
+    {
+        var lampRoot = new GameObject("LabCeilingLamp");
+        lampRoot.transform.SetParent(parent, false);
+        lampRoot.transform.position = pos;
+
+        // Point Light dịu mát, không đổ bóng để không tạo bóng chồng chéo rối mắt
+        var l = lampRoot.AddComponent<Light>();
+        l.type = LightType.Point;
+        l.color = col;
+        l.intensity = 1.6f;     // Cường độ vừa vặn, chuẩn xác (không làm chói/cháy bề mặt)
+        l.range = 14f;          // Độ phủ rộng, tán xạ mượt mà
+        l.shadows = LightShadows.None; // Không tạo bóng chằng chịt nhiều hướng
+
+        // Mô hình máng đèn LED treo trần Sci-Fi
+        var housing = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        housing.name = "LampHousing";
+        housing.transform.SetParent(lampRoot.transform, false);
+        housing.transform.localPosition = new Vector3(0, 0.04f, 0);
+        housing.transform.localScale = new Vector3(1.7f, 0.08f, 0.42f);
+        var colHousing = housing.GetComponent<Collider>();
+        if (colHousing != null) Object.DestroyImmediate(colHousing);
+
+        var housingMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        housingMat.color = new Color(0.2f, 0.22f, 0.25f);
+        housingMat.SetFloat("_Smoothness", 0.6f);
+        housing.GetComponent<Renderer>().material = housingMat;
+
+        // Dải LED phát sáng bên dưới máng đèn
+        var ledStrip = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        ledStrip.name = "LEDStrip";
+        ledStrip.transform.SetParent(lampRoot.transform, false);
+        ledStrip.transform.localPosition = new Vector3(0, -0.01f, 0);
+        ledStrip.transform.localScale = new Vector3(1.5f, 0.03f, 0.26f);
+        var colStrip = ledStrip.GetComponent<Collider>();
+        if (colStrip != null) Object.DestroyImmediate(colStrip);
+
+        var ledMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        ledMat.color = col;
+        ledMat.EnableKeyword("_EMISSION");
+        ledMat.SetColor("_EmissionColor", col * 1.6f);
+        ledStrip.GetComponent<Renderer>().material = ledMat;
+
+        lampRoot.isStatic = true;
+        housing.isStatic = true;
+        ledStrip.isStatic = true;
     }
 
     /// <summary>
@@ -281,43 +935,20 @@ public static class SceneQuickSwitcher
         var hpPnl = hpPanelTrans.gameObject;
         hpPnl.SetActive(true);
 
-        var pnlR = hpPnl.GetComponent<RectTransform>() ?? hpPnl.AddComponent<RectTransform>();
+        var pnlR = hpPnl.GetOrAddComponent<RectTransform>();
         pnlR.anchorMin = new Vector2(0f, 1f);
         pnlR.anchorMax = new Vector2(0f, 1f);
         pnlR.pivot = new Vector2(0f, 1f);
         pnlR.anchoredPosition = new Vector2(20f, -20f);
         pnlR.sizeDelta = new Vector2(290f, 62f);
 
-        var pnlImg = hpPnl.GetComponent<Image>() ?? hpPnl.AddComponent<Image>();
+        var pnlImg = hpPnl.GetOrAddComponent<Image>();
         pnlImg.color = new Color(0.06f, 0.08f, 0.12f, 0.92f);
+        pnlImg.raycastTarget = false;
 
-        // HPText
-        Transform hpTextTrans = hpPanelTrans.Find("HPText") ?? hpPanelTrans.Find("Text");
-        if (hpTextTrans == null)
-        {
-            var txtGO = new GameObject("HPText");
-            txtGO.transform.SetParent(hpPanelTrans, false);
-            hpTextTrans = txtGO.transform;
-        }
-
-        var txtR = hpTextTrans.GetComponent<RectTransform>() ?? hpTextTrans.gameObject.AddComponent<RectTransform>();
-        txtR.anchorMin = new Vector2(0.5f, 1f);
-        txtR.anchorMax = new Vector2(0.5f, 1f);
-        txtR.pivot = new Vector2(0.5f, 1f);
-        txtR.anchoredPosition = new Vector2(0f, -6f);
-        txtR.sizeDelta = new Vector2(260f, 24f);
-
-        var hpTxt = hpTextTrans.GetComponent<Text>() ?? hpTextTrans.gameObject.AddComponent<Text>();
-        hpTxt.text = "HP: 100 / 100";
-        hpTxt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        hpTxt.fontSize = 15;
-        hpTxt.fontStyle = FontStyle.Bold;
-        hpTxt.alignment = TextAnchor.MiddleCenter;
-        hpTxt.color = Color.white;
-
-        var ol = hpTxt.GetComponent<Outline>() ?? hpTxt.gameObject.AddComponent<Outline>();
-        ol.effectColor = new Color(0, 0, 0, 0.9f);
-        ol.effectDistance = new Vector2(1.5f, -1.5f);
+        var pnlOl = hpPnl.GetOrAddComponent<Outline>();
+        pnlOl.effectColor = new Color(0.1f, 0.4f, 0.7f, 0.5f);
+        pnlOl.effectDistance = new Vector2(1f, -1f);
 
         // HPSlider
         Transform slTrans = hpPanelTrans.Find("HPSlider") ?? hpPanelTrans.Find("Slider");
@@ -328,19 +959,20 @@ public static class SceneQuickSwitcher
             slTrans = slGO.transform;
         }
 
-        var slR = slTrans.GetComponent<RectTransform>() ?? slTrans.gameObject.AddComponent<RectTransform>();
+        var slR = slTrans.gameObject.GetOrAddComponent<RectTransform>();
         slR.anchorMin = new Vector2(0f, 0f);
         slR.anchorMax = new Vector2(1f, 0f);
         slR.pivot = new Vector2(0.5f, 0f);
         slR.anchoredPosition = new Vector2(0f, 10f);
-        slR.sizeDelta = new Vector2(-24f, 20f);
+        slR.sizeDelta = new Vector2(-24f, 18f);
 
-        var sl = slTrans.GetComponent<Slider>() ?? slTrans.gameObject.AddComponent<Slider>();
+        var sl = slTrans.gameObject.GetOrAddComponent<Slider>();
         sl.interactable = false;
         sl.transition = Selectable.Transition.None;
 
-        var bgImg = slTrans.GetComponent<Image>() ?? slTrans.gameObject.AddComponent<Image>();
+        var bgImg = slTrans.gameObject.GetOrAddComponent<Image>();
         bgImg.color = new Color(0.18f, 0.08f, 0.08f, 0.95f);
+        bgImg.raycastTarget = false;
 
         // FillArea & Fill
         Transform faTrans = slTrans.Find("FillArea") ?? slTrans.Find("Fill Area");
@@ -350,7 +982,7 @@ public static class SceneQuickSwitcher
             faGO.transform.SetParent(slTrans, false);
             faTrans = faGO.transform;
         }
-        var faR = faTrans.GetComponent<RectTransform>() ?? faTrans.gameObject.AddComponent<RectTransform>();
+        var faR = faTrans.gameObject.GetOrAddComponent<RectTransform>();
         faR.anchorMin = Vector2.zero;
         faR.anchorMax = Vector2.one;
         faR.offsetMin = new Vector2(2f, 2f);
@@ -363,17 +995,64 @@ public static class SceneQuickSwitcher
             fiGO.transform.SetParent(faTrans, false);
             fiTrans = fiGO.transform;
         }
-        var fiR = fiTrans.GetComponent<RectTransform>() ?? fiTrans.gameObject.AddComponent<RectTransform>();
+        var fiR = fiTrans.gameObject.GetOrAddComponent<RectTransform>();
         fiR.anchorMin = Vector2.zero;
         fiR.anchorMax = Vector2.one;
         fiR.offsetMin = Vector2.zero;
         fiR.offsetMax = Vector2.zero;
 
-        var fiImg = fiTrans.GetComponent<Image>() ?? fiTrans.gameObject.AddComponent<Image>();
+        var fiImg = fiTrans.gameObject.GetOrAddComponent<Image>();
         fiImg.color = new Color(0.2f, 0.9f, 0.35f);
+        fiImg.raycastTarget = false;
 
         sl.fillRect = fiR;
         sl.value = 1f;
+
+        // Xóa sạch các Text thừa trong HPPanel
+        Text keeperTxt = null;
+        var allTxts = hpPanelTrans.GetComponentsInChildren<Text>(true);
+        foreach (var t in allTxts)
+        {
+            if (keeperTxt == null && (t.name == "HPText" || t.name == "Text"))
+            {
+                keeperTxt = t;
+                keeperTxt.name = "HPText";
+            }
+            else
+            {
+                Object.DestroyImmediate(t.gameObject);
+            }
+        }
+
+        Transform hpTextTrans = keeperTxt != null ? keeperTxt.transform : hpPanelTrans.Find("HPText");
+        if (hpTextTrans == null)
+        {
+            var txtGO = new GameObject("HPText");
+            txtGO.transform.SetParent(hpPanelTrans, false);
+            hpTextTrans = txtGO.transform;
+        }
+
+        var txtR = hpTextTrans.gameObject.GetOrAddComponent<RectTransform>();
+        txtR.anchorMin = new Vector2(0.5f, 1f);
+        txtR.anchorMax = new Vector2(0.5f, 1f);
+        txtR.pivot = new Vector2(0.5f, 1f);
+        txtR.anchoredPosition = new Vector2(0f, -6f);
+        txtR.sizeDelta = new Vector2(260f, 24f);
+
+        var hpTxt = hpTextTrans.gameObject.GetOrAddComponent<Text>();
+        hpTxt.text = "HP: 100 / 100";
+        hpTxt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        hpTxt.fontSize = 15;
+        hpTxt.fontStyle = FontStyle.Bold;
+        hpTxt.alignment = TextAnchor.MiddleCenter;
+        hpTxt.color = Color.white;
+        hpTxt.raycastTarget = false;
+
+        var ol = hpTxt.gameObject.GetOrAddComponent<Outline>();
+        ol.effectColor = new Color(0, 0, 0, 0.9f);
+        ol.effectDistance = new Vector2(1.5f, -1.5f);
+
+        hpTextTrans.SetAsLastSibling();
 
         // Cập nhật SerializedObject cho GameplayUI
         var gpUI = canvasRoot.GetComponent<GameplayUI>();

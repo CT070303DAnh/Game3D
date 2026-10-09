@@ -175,7 +175,11 @@ public class ElevatorController : MonoBehaviour, IInteractable
         // Chuyen sang Man 3!
         if (GameManager.Instance != null)
         {
-            GameManager.Instance.LoadNextLevel();
+            GameManager.Instance.LoadLevelByName("Level3_Helipad");
+        }
+        else if (SceneTransitionManager.Instance != null)
+        {
+            SceneTransitionManager.Instance.TransitionToScene("Level3_Helipad");
         }
         else
         {

@@ -73,20 +73,22 @@ public class MobileInputController : MonoBehaviour, IMovementInput
 
     public void HideOnScreenButtons()
     {
-        Canvas canvas = GetComponent<Canvas>();
-        if (canvas != null) canvas.enabled = false;
-
-        Canvas parentCanvas = GetComponentInParent<Canvas>();
-        if (parentCanvas != null && parentCanvas.gameObject.name.Contains("Mobile"))
-        {
-            parentCanvas.enabled = false;
-        }
-
         if (interactButton != null) interactButton.gameObject.SetActive(false);
         if (runButton != null) runButton.gameObject.SetActive(false);
         if (jumpButton != null) jumpButton.gameObject.SetActive(false);
         if (joystickBg != null) joystickBg.gameObject.SetActive(false);
         if (joystickHandle != null) joystickHandle.gameObject.SetActive(false);
+
+        // Chi tat canvas neu no KHONG chua bat ky HUD phan tu nao (tranh lam mat thanh mau/objective)
+        Canvas canvas = GetComponent<Canvas>();
+        if (canvas != null && canvas.transform.Find("HPPanel") == null)
+            canvas.enabled = false;
+
+        Canvas parentCanvas = GetComponentInParent<Canvas>();
+        if (parentCanvas != null && parentCanvas.gameObject.name.Contains("Mobile") && parentCanvas.transform.Find("HPPanel") == null)
+        {
+            parentCanvas.enabled = false;
+        }
     }
 
     private void LateUpdate()

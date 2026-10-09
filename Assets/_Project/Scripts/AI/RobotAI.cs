@@ -130,12 +130,17 @@ public class RobotAI : MonoBehaviour
             agent.Warp(hit.position);
         }
 
+        // Phân biệt màn chơi:
         string sceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-        bool isLabLevel1 = sceneName.Contains("Lab");
+        bool isLabLevel1 = sceneName.Equals("Lab", System.StringComparison.OrdinalIgnoreCase)
+            || (sceneName.IndexOf("Lab", System.StringComparison.OrdinalIgnoreCase) >= 0
+                && sceneName.IndexOf("Reactor", System.StringComparison.OrdinalIgnoreCase) < 0
+                && sceneName.IndexOf("Helipad", System.StringComparison.OrdinalIgnoreCase) < 0);
 
-        // Ở Màn 1 (Lab): Robot ngủ đông, thức tỉnh sau khi lắp cầu chì & bật máy phát điện (PowerRestored)!
         if (isLabLevel1)
         {
+            // Màn 1 (Lab): Robot ngủ đông lúc đầu (tắt di chuyển, tắt nón quét radar, đèn cảm biến mờ tối).
+            // Robot CHỈ thức tỉnh khi người chơi bật Cầu Dao / Máy Phát Điện (GameState.PowerRestored).
             if (GameState.Instance != null && GameState.Instance.PowerRestored)
             {
                 ActivateRobot();
@@ -147,7 +152,7 @@ public class RobotAI : MonoBehaviour
         }
         else
         {
-            // Ở Màn 2 (Lò Phản Ứng) và Màn 3 (Sân đỗ trực thăng): Robot tuần tra kích hoạt ngay từ đầu
+            // Màn 2 (Reactor) và Màn 3 (Helipad): Robot luôn kích hoạt tuần tra ngay từ đầu
             ActivateRobot();
         }
 
@@ -180,9 +185,24 @@ public class RobotAI : MonoBehaviour
             CheckTouchShockProximity();
         }
 
-        // Cap nhat animator speed
-        if (hasAnimator)
-            animator.SetFloat(HashSpeed, agent.velocity.magnitude / chaseSpeed);
+        // Giữ cho Robot luôn đứng thẳng, không bao giờ bị lật hoặc nằm sàn
+        Vector3 curEuler = transform.eulerAngles;
+        if (Mathf.Abs(curEuler.x) > 3f || Mathf.Abs(curEuler.z) > 3f)
+        {
+            transform.eulerAngles = new Vector3(0f, curEuler.y, 0f);
+        }
+
+        // Chống kẹt animation: Nếu Animator lỡ rơi vào Die hoặc Jump, lập tức thoát ra hành vi hiện tại
+        if (hasAnimator && animator != null)
+        {
+            var st = animator.GetCurrentAnimatorStateInfo(0);
+            if (st.IsName("Die") || st.IsName("Jump"))
+            {
+                string resumeAnim = currentState == RobotState.Chase ? "Run_guard_AR" :
+                    (agent != null && agent.velocity.sqrMagnitude > 0.05f) ? "WalkFront_Shoot_AR" : "Idle_Guard_AR";
+                PlayAnimState(resumeAnim, 0.05f);
+            }
+        }
     }
 
     // ── STATES ──────────────────────────────────────
@@ -355,22 +375,30 @@ public class RobotAI : MonoBehaviour
 
     private void PerformAttack()
     {
-        if (hasAnimator) animator.SetTrigger(HashAttack);
+        PlayAnimState("Shoot_Autoshot_AR", 0.1f);
         PlaySound(attackSound);
 
-        string sceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-        bool isLevel1Or2 = sceneName.Contains("Lab") || sceneName.Contains("Level2") || sceneName.Contains("Reactor");
-
-        if (isLevel1Or2)
+        PlayerHealth ph = playerTransform != null 
+            ? (playerTransform.GetComponent<PlayerHealth>() ?? playerTransform.GetComponentInParent<PlayerHealth>())
+            : null;
+        if (ph == null)
         {
-            // Ở Màn 1 & Màn 2: Chạm hoặc tấn công đều giật điện -5 HP
-            TriggerElectricShock(playerTransform);
+            var pGO = GameObject.FindGameObjectWithTag("Player");
+            if (pGO != null) ph = pGO.GetComponent<PlayerHealth>() ?? pGO.GetComponentInParent<PlayerHealth>();
+            if (ph == null) ph = FindFirstObjectByType<PlayerHealth>();
         }
-        else
+
+        if (ph != null && !ph.IsDead)
         {
-            PlayerHealth ph = playerTransform.GetComponent<PlayerHealth>();
-            if (ph != null) ph.TakeDamage(attackDamage);
-            Debug.Log("[RobotAI] Attack! Damage: " + attackDamage);
+            int dmg = attackDamage > 0 ? attackDamage : 20;
+            ph.TakeDamage(dmg);
+            NotificationUI.ShowMessage($"⚠️ CẢNH BÁO: BỊ ROBOT TẤN CÔNG! (-{dmg} HP)");
+            Debug.Log($"[RobotAI] Attack hit player! -{dmg} HP. HP remaining: {ph.CurrentHealth}/{ph.MaxHealth}");
+
+            // Hiệu ứng giật nảy & hồ quang khi trúng đòn
+            StartCoroutine(ElectricShockVFXRoutine(ph.transform));
+            ApplyShockKnockback(ph.transform);
+            PlayShockAudio();
         }
     }
 
@@ -529,13 +557,25 @@ public class RobotAI : MonoBehaviour
             visionCone.gameObject.SetActive(false);
         }
 
-        PlayAnimState("Idle_Guard_AR", 0.1f);
+        if (animator == null)
+        {
+            animator = GetComponent<Animator>();
+            if (animator == null) animator = GetComponentInChildren<Animator>();
+            hasAnimator = animator != null && animator.runtimeAnimatorController != null;
+        }
+
         if (animator != null)
         {
+            int idleHash = Animator.StringToHash("Idle_Guard_AR");
+            if (animator.HasState(0, idleHash))
+            {
+                animator.Play(idleHash, 0, 0f);
+                animator.Update(0f);
+            }
             animator.speed = 0f;
         }
 
-        Debug.Log("[RobotAI] Robot is INACTIVE (Chờ lắp Cầu Chì vào máy phát điện mới thức tỉnh).");
+        Debug.Log("[RobotAI] 💤 Robot đang NGỦ ĐÔNG (Chờ người chơi bật Cầu Dao / Máy Phát Điện mới thức tỉnh).");
     }
 
     public void ActivateRobot()
@@ -549,7 +589,10 @@ public class RobotAI : MonoBehaviour
             {
                 agent.Warp(hit.position);
             }
-            agent.isStopped = false;
+            if (agent.isOnNavMesh)
+            {
+                agent.isStopped = false;
+            }
         }
 
         if (visionCone != null)
@@ -568,7 +611,8 @@ public class RobotAI : MonoBehaviour
             animator.speed = 1f;
         }
 
-        PlaySound(alertSound);
+        AudioClip wakeClip = alertSound != null ? alertSound : GetProceduralWakeClip();
+        PlaySound(wakeClip);
         ChangeState(RobotState.Patrol);
         Debug.Log("[RobotAI] ⚡ Robot ACTIVATED! Bắt đầu tuần tra...");
     }
@@ -793,6 +837,32 @@ public class RobotAI : MonoBehaviour
         return proceduralZapClip;
     }
 
+    private static AudioClip proceduralWakeClip;
+    public static AudioClip GetProceduralWakeClip()
+    {
+        if (proceduralWakeClip != null) return proceduralWakeClip;
+
+        int sampleRate = 44100;
+        float duration = 0.85f;
+        int sampleCount = Mathf.FloorToInt(sampleRate * duration);
+        float[] samples = new float[sampleCount];
+
+        for (int i = 0; i < sampleCount; i++)
+        {
+            float t = (float)i / sampleRate;
+            float freq = Mathf.Lerp(260f, 950f, t / duration);
+            float envelope = Mathf.Sin(Mathf.Clamp01(t / duration) * Mathf.PI);
+            float tone = Mathf.Sin(2f * Mathf.PI * freq * t) * 0.45f;
+            float tone2 = Mathf.Sin(2f * Mathf.PI * freq * 1.5f * t) * 0.25f;
+            float pulse = Mathf.Sin(2f * Mathf.PI * 16f * t) > 0 ? 1f : 0.6f;
+            samples[i] = Mathf.Clamp((tone + tone2) * pulse * envelope, -1f, 1f);
+        }
+
+        proceduralWakeClip = AudioClip.Create("RobotWake_Procedural", sampleCount, 1, sampleRate, false);
+        proceduralWakeClip.SetData(samples, 0);
+        return proceduralWakeClip;
+    }
+
     private void EnsureShockComponents()
     {
         // 1. Trigger Collider để bắt va chạm tiếp xúc
@@ -810,14 +880,15 @@ public class RobotAI : MonoBehaviour
             sc.center = new Vector3(0f, 0.9f, 0f);
         }
 
-        // 2. Rigidbody Kinematic để Unity Physics gửi sự kiện Trigger/Collision
+        // 2. Rigidbody Kinematic để Unity Physics gửi sự kiện Trigger/Collision (Khoá toàn bộ xoay)
         var rb = GetComponent<Rigidbody>();
         if (rb == null)
         {
             rb = gameObject.AddComponent<Rigidbody>();
-            rb.isKinematic = true;
-            rb.useGravity = false;
         }
+        rb.isKinematic = true;
+        rb.useGravity = false;
+        rb.constraints = RigidbodyConstraints.FreezeAll;
 
         // 3. Shock Flash Light
         Transform flashT = transform.Find("ShockFlashLight");

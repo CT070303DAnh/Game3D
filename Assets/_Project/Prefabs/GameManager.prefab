@@ -46,3 +46,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
   mainMenuScene: MainMenu
   gameplayScene: Lab
+  levelScenes:
+  - Lab
+  - Level2_Reactor
+  - Level3_Helipad
+  currentLevelIndex: 0

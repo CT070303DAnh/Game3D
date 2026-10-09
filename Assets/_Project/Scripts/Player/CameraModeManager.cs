@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// CameraModeManager: Quan ly chuyen doi goc nhin Camera (First Person FPS <-> Third Person PUBG).
@@ -156,7 +156,7 @@ public class CameraModeManager : MonoBehaviour
         mainCam.nearClipPlane = 0.05f;
 
         // 3. Bat FirstPersonCamera
-        if (fpc == null) fpc = mainCam.GetComponent<FirstPersonCamera>() ?? mainCam.gameObject.AddComponent<FirstPersonCamera>();
+        if (fpc == null) fpc = mainCam.gameObject.GetOrAddComponent<FirstPersonCamera>();
         fpc.enabled = true;
         fpc.SetPlayerBody(player.transform);
 
@@ -193,7 +193,7 @@ public class CameraModeManager : MonoBehaviour
             pubgCam = pubgRig.AddComponent<PubgCamera>();
         }
         pubgRig.SetActive(true);
-        if (pubgCam == null) pubgCam = pubgRig.GetComponent<PubgCamera>() ?? pubgRig.AddComponent<PubgCamera>();
+        if (pubgCam == null) pubgCam = pubgRig.GetOrAddComponent<PubgCamera>();
         pubgCam.enabled = true;
 
         // Gan target

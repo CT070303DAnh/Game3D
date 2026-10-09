@@ -33,7 +33,15 @@ public class ExitDoor : MonoBehaviour, IInteractable
         NotificationUI.ShowMessage("HOÀN THÀNH MÀN 1! Đang tiến vào Khu Lò Phản Ứng...");
         if (GameManager.Instance != null)
         {
-            GameManager.Instance.LoadNextLevel();
+            GameManager.Instance.LoadLevelByName("Level2_Reactor");
+        }
+        else if (SceneTransitionManager.Instance != null)
+        {
+            SceneTransitionManager.Instance.TransitionToScene("Level2_Reactor");
+        }
+        else
+        {
+            UnityEngine.SceneManagement.SceneManager.LoadScene("Level2_Reactor");
         }
     }
 
