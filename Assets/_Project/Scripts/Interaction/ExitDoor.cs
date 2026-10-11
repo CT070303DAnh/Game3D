@@ -25,10 +25,12 @@ public class ExitDoor : MonoBehaviour, IInteractable
     {
         if (GameState.Instance == null || !GameState.Instance.ExitUnlocked)
         {
+            GameAudioManager.PlayDoorLocked(transform.position);
             NotificationUI.ShowMessage("Cửa thoát đang khóa. Hoàn thành tất cả nhiệm vụ trước.");
             return;
         }
 
+        GameAudioManager.PlayDoorOpen(transform.position);
         Debug.Log("[ExitDoor] Player escaped through exit door!");
         NotificationUI.ShowMessage("HOÀN THÀNH MÀN 1! Đang tiến vào Khu Lò Phản Ứng...");
         if (GameManager.Instance != null)
@@ -47,6 +49,7 @@ public class ExitDoor : MonoBehaviour, IInteractable
 
     private void OnUnlocked()
     {
+        GameAudioManager.PlayDoorUnlock(transform.position);
         NotificationUI.ShowMessage("CỬA THOÁT MỞ KHÓA! Chạy đi ngay!");
         UpdateVisual();
     }

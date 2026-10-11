@@ -61,6 +61,7 @@ public class Generator : MonoBehaviour, IInteractable
 
         if (GameState.Instance == null || !GameState.Instance.FuseCollected)
         {
+            GameAudioManager.PlayTerminalError(transform.position);
             NotificationUI.ShowMessage("CẢNH BÁO: Máy phát điện bị thiếu CẦU CHÌ! Hãy tìm Cầu Chì trong phòng kho để lắp vào.");
             return;
         }
@@ -73,14 +74,18 @@ public class Generator : MonoBehaviour, IInteractable
         // Phase 1: Insert fuse
         state = GeneratorState.InsertingFuse;
         NotificationUI.ShowMessage("Đang lắp Cầu Chì vào máy phát điện...");
-        PlaySound(insertFuseSound);
+        if (insertFuseSound != null) PlaySound(insertFuseSound);
+        else GameAudioManager.PlaySwitchLever(transform.position);
+
         if (electricSparks != null) electricSparks.Play();
         yield return new WaitForSeconds(1f);
 
         // Phase 2: Starting
         state = GeneratorState.Starting;
         NotificationUI.ShowMessage("Máy phát điện đang nổ máy...");
-        PlaySound(startupSound);
+        if (startupSound != null) PlaySound(startupSound);
+        else GameAudioManager.PlayGeneratorStart(transform.position);
+
         yield return new WaitForSeconds(startupDuration);
 
         // Phase 3: ON

@@ -59,12 +59,14 @@ public class AccessCodePuzzle : MonoBehaviour, IInteractable
             currentStep++;
             if (currentStep >= correctSequence.Length)
             {
+                GameAudioManager.PlayTerminalSuccess();
                 AccessCodeUI.SetStatus("✓ [3/3] ĐÚNG TOÀN BỘ MÃ MÀU! ĐANG MỞ KHÓA CỬA THOÁT HIỂM...", Color.green);
                 NotificationUI.ShowMessage($"✓ [3/3] ĐÚNG MÀU {color}! HOÀN TẤT MẬT MÃ MÀU!");
                 StartCoroutine(Solve());
             }
             else
             {
+                GameAudioManager.PlayTerminalKey();
                 string nextHint = currentStep == 1 ? "RED" : "GREEN";
                 AccessCodeUI.SetStatus($"✓ [{currentStep}/3] Đúng màu {color}! Tiếp theo: {nextHint}", Color.cyan);
                 NotificationUI.ShowMessage($"✓ [{currentStep}/{correctSequence.Length}] Đúng màu {color}! Tiếp theo: {nextHint}");
@@ -72,6 +74,7 @@ public class AccessCodePuzzle : MonoBehaviour, IInteractable
         }
         else
         {
+            GameAudioManager.PlayTerminalError();
             AccessCodeUI.SetStatus($"✗ TỪ CHỐI TRUY CẬP - Sai màu '{color}'! Đang đặt lại...", Color.red);
             NotificationUI.ShowMessage($"✗ TỪ CHỐI TRUY CẬP - Sai màu '{color}'! Thử lại từ đầu.");
             StartCoroutine(ResetAfterDelay());

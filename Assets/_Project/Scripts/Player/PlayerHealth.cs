@@ -73,6 +73,7 @@ public class PlayerHealth : MonoBehaviour
 
         OnHealthChanged?.Invoke(currentHealth, maxHealth);
         OnPlayerDamaged?.Invoke();
+        GameAudioManager.PlayPlayerHurt();
 
         // Bat ky sau khi bi damage
         isInvincible = true;

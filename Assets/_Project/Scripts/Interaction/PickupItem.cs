@@ -128,6 +128,7 @@ public class PickupItem : MonoBehaviour, IInteractable
 
         string msg = !string.IsNullOrEmpty(pickupMessage) ? pickupMessage : $"ĐÃ NHẶT: {itemName}";
         NotificationUI.ShowMessage(msg);
+        GameAudioManager.PlayPickup();
 
         if (pickupVFX != null)
             Instantiate(pickupVFX, transform.position, Quaternion.identity);

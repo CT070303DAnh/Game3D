@@ -148,6 +148,7 @@ public class InventoryUI : MonoBehaviour
     {
         EnsureInventoryPanel();
         isOpen = true;
+        GameAudioManager.PlayInventoryToggle(true);
 
         if (inventoryPanel != null)
         {
@@ -168,6 +169,7 @@ public class InventoryUI : MonoBehaviour
     public void CloseInventory()
     {
         isOpen = false;
+        GameAudioManager.PlayInventoryToggle(false);
         if (inventoryPanel != null)
         {
             inventoryPanel.SetActive(false);

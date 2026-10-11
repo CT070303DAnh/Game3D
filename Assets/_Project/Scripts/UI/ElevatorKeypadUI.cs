@@ -183,6 +183,7 @@ public class ElevatorKeypadUI : MonoBehaviour
         if (isLocked) return;
         if (currentInput.Length < maxDigits)
         {
+            GameAudioManager.PlayTerminalKey();
             currentInput += digit;
             UpdateDisplay();
         }
@@ -193,6 +194,7 @@ public class ElevatorKeypadUI : MonoBehaviour
         if (isLocked) return;
         if (currentInput.Length > 0)
         {
+            GameAudioManager.PlayTerminalKey();
             currentInput = currentInput.Substring(0, currentInput.Length - 1);
             UpdateDisplay();
         }
@@ -201,6 +203,7 @@ public class ElevatorKeypadUI : MonoBehaviour
     public void ClearInput()
     {
         if (isLocked) return;
+        GameAudioManager.PlayTerminalKey();
         currentInput = "";
         UpdateDisplay();
     }
@@ -210,6 +213,7 @@ public class ElevatorKeypadUI : MonoBehaviour
         if (isLocked) return;
         if (currentInput.Length < maxDigits)
         {
+            GameAudioManager.PlayTerminalError();
             if (statusText != null)
             {
                 statusText.text = $"Vui lòng nhập đủ {maxDigits} chữ số!";
@@ -222,6 +226,7 @@ public class ElevatorKeypadUI : MonoBehaviour
         {
             // THANH CONG!
             isLocked = true;
+            GameAudioManager.PlayTerminalSuccess();
             if (statusText != null)
             {
                 statusText.text = "✓ MẬT MÃ CHÍNH XÁC! KHỞI ĐỘNG THANG MÁY...";
@@ -233,6 +238,7 @@ public class ElevatorKeypadUI : MonoBehaviour
         else
         {
             // THAT BAI!
+            GameAudioManager.PlayTerminalError();
             if (statusText != null)
             {
                 statusText.text = "✗ TỪ CHỐI TRUY CẬP - SAI MÃ!";

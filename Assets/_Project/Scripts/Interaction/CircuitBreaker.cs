@@ -69,6 +69,7 @@ public class CircuitBreaker : MonoBehaviour, IInteractable
         bool hasFuse = GameState.Instance != null && GameState.Instance.FuseCollected;
         if (!hasFuse)
         {
+            GameAudioManager.PlayTerminalError(transform.position);
             NotificationUI.ShowMessage("CẢNH BÁO: Tủ điện bị thiếu CẦU CHÌ (Fuse)! Hãy tìm Cầu Chì trong phòng để lắp vào.");
             return;
         }
@@ -80,6 +81,8 @@ public class CircuitBreaker : MonoBehaviour, IInteractable
     {
         isAnimating = true;
         isSwitchedOn = true;
+
+        GameAudioManager.PlaySwitchLever(transform.position);
 
         AudioSource audio = GetComponent<AudioSource>();
         if (audio == null)

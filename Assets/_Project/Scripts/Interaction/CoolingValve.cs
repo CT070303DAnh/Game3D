@@ -120,6 +120,7 @@ public class CoolingValve : MonoBehaviour, IInteractable
         bool hasWrench = GameState.Instance != null && GameState.Instance.WrenchCollected;
         if (!hasWrench)
         {
+            GameAudioManager.PlayTerminalError(transform.position);
             NotificationUI.ShowMessage("❌ BẠN CẦN CỜ LÊ ĐỂ VẶN VAN! Hãy tìm Cờ Lê tại Kho Phụ Tùng (Phía Bắc).");
             AudioSource errAudio = GetComponent<AudioSource>();
             if (errAudio == null)
@@ -141,6 +142,8 @@ public class CoolingValve : MonoBehaviour, IInteractable
         isClosed = true;
 
         // Am thanh van van
+        GameAudioManager.PlayValveTurn(transform.position);
+
         AudioSource audio = GetComponent<AudioSource>();
         if (audio == null)
         {

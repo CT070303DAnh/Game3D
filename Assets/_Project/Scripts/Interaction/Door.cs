@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 
 /// <summary>
@@ -78,14 +78,16 @@ public class Door : MonoBehaviour, IInteractable
 
         if (isLocked)
         {
-            PlaySound(lockedSound);
+            if (lockedSound != null) PlaySound(lockedSound);
+            else GameAudioManager.PlayDoorLocked(transform.position);
             NotificationUI.ShowMessage(lockedMessage);
             return;
         }
 
         if (!MeetsRequirement())
         {
-            PlaySound(lockedSound);
+            if (lockedSound != null) PlaySound(lockedSound);
+            else GameAudioManager.PlayDoorLocked(transform.position);
             NotificationUI.ShowMessage(requirementMessage);
             return;
         }
@@ -103,7 +105,9 @@ public class Door : MonoBehaviour, IInteractable
         else
             // Fallback khong co animator: xoay cua
             StartCoroutine(RotateDoorOpen());
-        PlaySound(openSound);
+
+        if (openSound != null) PlaySound(openSound);
+        else GameAudioManager.PlayDoorOpen(transform.position);
 
         if (autoCloseDelay > 0)
             StartCoroutine(AutoClose());
@@ -120,7 +124,10 @@ public class Door : MonoBehaviour, IInteractable
             animator.SetBool(HashIsOpen, false);
         else
             StartCoroutine(RotateDoorClose());
-        PlaySound(closeSound);
+
+        if (closeSound != null) PlaySound(closeSound);
+        else GameAudioManager.PlayDoorOpen(transform.position);
+
         currentState = DoorState.Closed;
     }
 
@@ -128,6 +135,7 @@ public class Door : MonoBehaviour, IInteractable
     {
         isLocked = false;
         if (unlockVFX != null) Instantiate(unlockVFX, transform.position, Quaternion.identity);
+        GameAudioManager.PlayDoorUnlock(transform.position);
         Debug.Log($"[Door] {name} unlocked.");
     }
 

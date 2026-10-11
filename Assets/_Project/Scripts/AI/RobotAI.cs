@@ -438,12 +438,11 @@ public class RobotAI : MonoBehaviour
         // Bắn tia đạn laser đỏ rực
         StartCoroutine(LaserTracerRoutine(muzzlePos, targetPos));
         PlayAnimState("Shoot_Autoshot_AR", 0.1f);
+        GameAudioManager.PlayRobotLaser(muzzlePos);
 
         // Âm thanh bắn súng
         if (attackSound != null && audioSource != null)
             audioSource.PlayOneShot(attackSound);
-        else if (audioSource != null && !audioSource.isPlaying)
-            audioSource.Play();
 
         // Gây sát thương nếu trúng người chơi
         if (hitPlayer)
@@ -507,6 +506,7 @@ public class RobotAI : MonoBehaviour
                 SetSensorColor(chaseColor);
                 PlayAnimState("Run_guard_AR", 0.25f);
                 agent.isStopped = false;
+                GameAudioManager.PlayRobotAlert(transform.position);
                 PlaySound(chaseSound);
                 OnRobotAlert?.Invoke();
                 break;
@@ -802,6 +802,7 @@ public class RobotAI : MonoBehaviour
 
     private void PlayShockAudio()
     {
+        GameAudioManager.PlayRobotShock(transform.position);
         AudioClip clipToPlay = shockAudioClip != null ? shockAudioClip : GetProceduralZapClip();
         if (clipToPlay != null && audioSource != null)
         {
