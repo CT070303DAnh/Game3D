@@ -219,39 +219,10 @@ public class HelicopterController : MonoBehaviour, IInteractable
 
     private void ShowGrandVictoryScreen()
     {
-        var winPnl = GameObject.Find("WinPanel");
-        if (winPnl != null)
+        MissionPassedUI.ShowMissionPassed();
+        if (GameManager.Instance != null)
         {
-            winPnl.SetActive(true);
-            winPnl.transform.SetAsLastSibling();
-
-            var titleTxt = winPnl.transform.Find("WinTitle")?.GetComponent<UnityEngine.UI.Text>();
-            if (titleTxt != null)
-            {
-                titleTxt.text = "🎉 CHIẾN THẮNG TUYỆT ĐỐI! 🎉\nBẠN ĐÃ THOÁT KHỎI KHU NGHIÊN CỨU!";
-                titleTxt.fontSize = 28;
-                titleTxt.color = Color.yellow;
-            }
-
-            var nextBtnText = winPnl.transform.Find("NextBtn/Text")?.GetComponent<UnityEngine.UI.Text>();
-            if (nextBtnText != null)
-            {
-                nextBtnText.text = "[ CHƠI LẠI TỪ MÀN 1 ]";
-            }
-
-            var nextBtn = winPnl.transform.Find("NextBtn")?.GetComponent<UnityEngine.UI.Button>();
-            if (nextBtn != null)
-            {
-                nextBtn.onClick.RemoveAllListeners();
-                nextBtn.onClick.AddListener(() => {
-                    Time.timeScale = 1f;
-                    UnityEngine.SceneManagement.SceneManager.LoadScene("Lab");
-                });
-            }
-        }
-        else
-        {
-            NotificationUI.ShowMessage("🎉 CHIẾN THẮNG TUYỆT ĐỐI! BẠN ĐÃ THOÁT KHỎI KHU NGHIÊN CỨU BÍ MẬT! 🎉");
+            GameManager.Instance.TriggerWin();
         }
     }
 }

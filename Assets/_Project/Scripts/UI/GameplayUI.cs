@@ -638,24 +638,7 @@ public class GameplayUI : MonoBehaviour
 
     private void ShowWin()
     {
-        EnsureWinPanel();
-        AccessCodeUI.ForceClose();
-        TerminalUI.ForceClose();
-        ElevatorKeypadUI.ForceClose();
-        if (InventoryUI.IsOpen)
-        {
-            var inv = GetComponent<InventoryUI>() ?? FindFirstObjectByType<InventoryUI>();
-            inv?.CloseInventory();
-        }
-
-        if (winPanel != null)
-        {
-            winPanel.SetActive(true);
-            winPanel.transform.SetAsLastSibling();
-        }
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
-        Time.timeScale = 0f;
+        MissionPassedUI.ShowMissionPassed();
     }
 
     private static GameObject gameOverCanvasGO;

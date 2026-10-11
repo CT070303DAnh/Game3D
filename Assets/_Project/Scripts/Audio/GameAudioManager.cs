@@ -117,7 +117,7 @@ public class GameAudioManager : MonoBehaviour
             "sfx_door_open", "sfx_door_locked", "sfx_door_unlock",
             "sfx_switch_lever", "sfx_generator_start", "sfx_valve_turn",
             "sfx_terminal_key", "sfx_terminal_success", "sfx_terminal_error",
-            "sfx_inventory_open", "sfx_inventory_close"
+            "sfx_inventory_open", "sfx_inventory_close", "sfx_mission_passed"
         };
 
         foreach (var cName in allClipNames)
@@ -358,5 +358,11 @@ public class GameAudioManager : MonoBehaviour
     public static void PlayInventoryToggle(bool open)
     {
         EnsureInstance().PlaySound2D(open ? "sfx_inventory_open" : "sfx_inventory_close", 0.85f, 1.0f);
+    }
+
+    /// <summary>Âm thanh Chiến thắng MISSION PASSED</summary>
+    public static void PlayMissionPassed()
+    {
+        EnsureInstance().PlaySound2D("sfx_mission_passed", 1.0f, 1.0f);
     }
 }

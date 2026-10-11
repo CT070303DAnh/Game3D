@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
@@ -22,13 +22,169 @@ public class MainMenuUI : MonoBehaviour
     [SerializeField] private Slider sfxVolumeSlider;
     [SerializeField] private Button closeSettingsButton;
 
+    [Header("Leaderboard & Player Name")]
+    [SerializeField] private InputField playerNameInput;
+    [SerializeField] private Button leaderboardButton;
+
     private void Start()
     {
         // Dam bao settings panel dong khi vao menu
         if (settingsPanel != null) settingsPanel.SetActive(false);
         if (mainPanel != null) mainPanel.SetActive(true);
 
+        EnsureLeaderboardElements();
         SetupButtons();
+    }
+
+    private void EnsureLeaderboardElements()
+    {
+        Canvas canvas = GetComponentInParent<Canvas>() ?? FindFirstObjectByType<Canvas>();
+        Transform root = (mainPanel != null) ? mainPanel.transform : (canvas != null ? canvas.transform : transform);
+        Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+        // 1. Ô Nhập Tên Người Chơi
+        if (playerNameInput == null)
+        {
+            var existingInput = root.Find("PlayerNameContainer/PlayerNameInput")?.GetComponent<InputField>();
+            if (existingInput != null) playerNameInput = existingInput;
+        }
+
+        if (playerNameInput == null)
+        {
+            var nameBoxGO = new GameObject("PlayerNameContainer");
+            nameBoxGO.transform.SetParent(root, false);
+            var nameBoxR = nameBoxGO.AddComponent<RectTransform>();
+            nameBoxR.anchorMin = new Vector2(0.5f, 0.5f);
+            nameBoxR.anchorMax = new Vector2(0.5f, 0.5f);
+            nameBoxR.pivot = new Vector2(0.5f, 0.5f);
+            nameBoxR.anchoredPosition = new Vector2(0f, 105f);
+            nameBoxR.sizeDelta = new Vector2(360f, 65f);
+
+            // Label tiêu đề
+            var lblGO = new GameObject("Label");
+            lblGO.transform.SetParent(nameBoxGO.transform, false);
+            var lblR = lblGO.AddComponent<RectTransform>();
+            lblR.anchoredPosition = new Vector2(0f, 18f);
+            lblR.sizeDelta = new Vector2(360f, 25f);
+            var lblTxt = lblGO.AddComponent<Text>();
+            lblTxt.text = "👤 NHẬP TÊN ĐỂ GHI DANH RANK:";
+            lblTxt.font = font;
+            lblTxt.fontSize = 14;
+            lblTxt.fontStyle = FontStyle.Bold;
+            lblTxt.alignment = TextAnchor.MiddleCenter;
+            lblTxt.color = new Color(0.35f, 0.9f, 1f);
+
+            // InputField GO
+            var inputGO = new GameObject("PlayerNameInput");
+            inputGO.transform.SetParent(nameBoxGO.transform, false);
+            var inputR = inputGO.AddComponent<RectTransform>();
+            inputR.anchoredPosition = new Vector2(0f, -12f);
+            inputR.sizeDelta = new Vector2(340f, 38f);
+
+            var inputImg = inputGO.AddComponent<Image>();
+            inputImg.color = new Color(0.06f, 0.12f, 0.22f, 0.95f);
+
+            var inputOl = inputGO.AddComponent<Outline>();
+            inputOl.effectColor = new Color(0.2f, 0.7f, 1f, 0.9f);
+            inputOl.effectDistance = new Vector2(1.5f, -1.5f);
+
+            // Text hiển thị
+            var txtGO = new GameObject("Text");
+            txtGO.transform.SetParent(inputGO.transform, false);
+            var txtR = txtGO.AddComponent<RectTransform>();
+            txtR.anchorMin = Vector2.zero;
+            txtR.anchorMax = Vector2.one;
+            txtR.offsetMin = new Vector2(10f, 0f);
+            txtR.offsetMax = new Vector2(-10f, 0f);
+            var txt = txtGO.AddComponent<Text>();
+            txt.font = font;
+            txt.fontSize = 16;
+            txt.fontStyle = FontStyle.Bold;
+            txt.color = Color.yellow;
+            txt.alignment = TextAnchor.MiddleCenter;
+
+            // Placeholder Text
+            var phGO = new GameObject("Placeholder");
+            phGO.transform.SetParent(inputGO.transform, false);
+            var phR = phGO.AddComponent<RectTransform>();
+            phR.anchorMin = Vector2.zero;
+            phR.anchorMax = Vector2.one;
+            phR.offsetMin = new Vector2(10f, 0f);
+            phR.offsetMax = new Vector2(-10f, 0f);
+            var phTxt = phGO.AddComponent<Text>();
+            phTxt.text = "Nhập tên của bạn...";
+            phTxt.font = font;
+            phTxt.fontSize = 16;
+            phTxt.fontStyle = FontStyle.Italic;
+            phTxt.color = new Color(0.6f, 0.7f, 0.8f, 0.6f);
+            phTxt.alignment = TextAnchor.MiddleCenter;
+
+            playerNameInput = inputGO.AddComponent<InputField>();
+            playerNameInput.textComponent = txt;
+            playerNameInput.placeholder = phTxt;
+            playerNameInput.characterLimit = 16;
+        }
+
+        // Tự động load tên đã lưu
+        if (playerNameInput != null && LeaderboardManager.Instance != null)
+        {
+            playerNameInput.text = LeaderboardManager.Instance.CurrentPlayerName;
+            playerNameInput.onValueChanged.AddListener((val) =>
+            {
+                LeaderboardManager.Instance.CurrentPlayerName = val;
+            });
+        }
+
+        // 2. Nút BẢNG XẾP HẠNG
+        if (leaderboardButton == null)
+        {
+            var existingBtn = root.Find("LeaderboardButton")?.GetComponent<Button>();
+            if (existingBtn != null) leaderboardButton = existingBtn;
+        }
+
+        if (leaderboardButton == null)
+        {
+            var btnGO = new GameObject("LeaderboardButton");
+            btnGO.transform.SetParent(root, false);
+            var btnR = btnGO.AddComponent<RectTransform>();
+            btnR.anchorMin = new Vector2(0.5f, 0.5f);
+            btnR.anchorMax = new Vector2(0.5f, 0.5f);
+            btnR.pivot = new Vector2(0.5f, 0.5f);
+            btnR.anchoredPosition = new Vector2(0f, -60f);
+            btnR.sizeDelta = new Vector2(340f, 48f);
+
+            var btnImg = btnGO.AddComponent<Image>();
+            btnImg.color = new Color(0.72f, 0.52f, 0.08f, 0.95f); // Vàng kim quý phái
+
+            var btnOl = btnGO.AddComponent<Outline>();
+            btnOl.effectColor = new Color(1f, 0.85f, 0.2f, 0.95f);
+            btnOl.effectDistance = new Vector2(1.5f, -1.5f);
+
+            leaderboardButton = btnGO.AddComponent<Button>();
+
+            var txtGO = new GameObject("Text");
+            txtGO.transform.SetParent(btnGO.transform, false);
+            var txtR = txtGO.AddComponent<RectTransform>();
+            txtR.anchorMin = Vector2.zero;
+            txtR.anchorMax = Vector2.one;
+            txtR.offsetMin = Vector2.zero;
+            txtR.offsetMax = Vector2.zero;
+
+            var txt = txtGO.AddComponent<Text>();
+            txt.text = "🏆 BẢNG XẾP HẠNG (RANK)";
+            txt.font = font;
+            txt.fontSize = 18;
+            txt.fontStyle = FontStyle.Bold;
+            txt.alignment = TextAnchor.MiddleCenter;
+            txt.color = Color.white;
+            txt.raycastTarget = false;
+        }
+
+        if (leaderboardButton != null)
+        {
+            leaderboardButton.onClick.RemoveAllListeners();
+            leaderboardButton.onClick.AddListener(OnLeaderboardClicked);
+        }
     }
 
     private void SetupButtons()
@@ -46,9 +202,22 @@ public class MainMenuUI : MonoBehaviour
             closeSettingsButton.onClick.AddListener(OnCloseSettings);
     }
 
+    private void OnLeaderboardClicked()
+    {
+        LeaderboardUI.ShowLeaderboard();
+    }
+
     private void OnPlayClicked()
     {
-        Debug.Log("[MainMenuUI] Play clicked.");
+        // Lưu tên người chơi trước khi bắt đầu
+        if (playerNameInput != null && !string.IsNullOrWhiteSpace(playerNameInput.text))
+        {
+            LeaderboardManager.Instance.CurrentPlayerName = playerNameInput.text.Trim();
+        }
+
+        Debug.Log($"[MainMenuUI] Bắt đầu chơi với tên: {LeaderboardManager.Instance?.CurrentPlayerName}");
+        LeaderboardManager.StartNewRun();
+
         if (GameManager.Instance != null)
             GameManager.Instance.StartGame();
         else
@@ -80,6 +249,7 @@ public class MainMenuUI : MonoBehaviour
     {
         // Cleanup listeners de tranh memory leak
         if (playButton != null) playButton.onClick.RemoveAllListeners();
+        if (leaderboardButton != null) leaderboardButton.onClick.RemoveAllListeners();
         if (settingsButton != null) settingsButton.onClick.RemoveAllListeners();
         if (exitButton != null) exitButton.onClick.RemoveAllListeners();
         if (closeSettingsButton != null) closeSettingsButton.onClick.RemoveAllListeners();

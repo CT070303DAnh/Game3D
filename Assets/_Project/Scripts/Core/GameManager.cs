@@ -131,6 +131,9 @@ public class GameManager : MonoBehaviour
         currentLevelIndex = 0;
         CurrentPhase = GamePhase.Playing;
         Time.timeScale = 1f;
+
+        LeaderboardManager.StartNewRun();
+
         string startScene = levelScenes.Length > 0 ? levelScenes[0] : gameplayScene;
 
         if (SceneTransitionManager.Instance != null)
@@ -245,6 +248,7 @@ public class GameManager : MonoBehaviour
         if (CurrentPhase == GamePhase.Win) return;
         CurrentPhase = GamePhase.Win;
         Debug.Log("[GameManager] Player escaped! WIN.");
+        MissionPassedUI.ShowMissionPassed();
         OnGameWin?.Invoke();
     }
 
