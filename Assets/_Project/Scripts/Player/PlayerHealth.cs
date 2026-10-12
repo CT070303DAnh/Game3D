@@ -23,6 +23,25 @@ public class PlayerHealth : MonoBehaviour
     private float invincibleTimer;
     private bool isDead;
 
+    // Lưu lượng máu chuyển tiếp giữa các màn chơi
+    private static int savedHealth = -1; // -1 = Chưa lưu / Khởi tạo game mới
+
+    public static int SavedHealth => savedHealth;
+
+    /// <summary>Lưu hoặc ép lượng máu (dùng khi chuyển màn hoặc khởi tạo).</summary>
+    public static void SetSavedHealth(int health)
+    {
+        savedHealth = Mathf.Max(1, health);
+        Debug.Log($"[PlayerHealth] Đã lưu lượng máu chuyển màn: {savedHealth} HP");
+    }
+
+    /// <summary>Reset lượng máu đã lưu về mặc định (dùng khi bắt đầu game mới hoặc chơi lại sau khi chết).</summary>
+    public static void ResetSavedHealth()
+    {
+        savedHealth = -1;
+        Debug.Log("[PlayerHealth] Đã reset lượng máu lưu trữ về mặc định (100 HP).");
+    }
+
     // ───────────────────────────────────────────────
     // Events
     // ───────────────────────────────────────────────
@@ -43,8 +62,27 @@ public class PlayerHealth : MonoBehaviour
     // ───────────────────────────────────────────────
     private void Start()
     {
-        currentHealth = maxHealth;
+        if (savedHealth > 0)
+        {
+            currentHealth = Mathf.Clamp(savedHealth, 1, maxHealth);
+            Debug.Log($"[PlayerHealth] Tiếp tục lượng máu từ màn trước: {currentHealth}/{maxHealth} HP");
+        }
+        else
+        {
+            currentHealth = maxHealth;
+        }
+
+        savedHealth = currentHealth;
         OnHealthChanged?.Invoke(currentHealth, maxHealth);
+    }
+
+    private void OnDestroy()
+    {
+        if (!isDead && currentHealth > 0)
+        {
+            savedHealth = currentHealth;
+            Debug.Log($"[PlayerHealth] Lưu trữ máu trước khi đổi màn: {savedHealth}/{maxHealth} HP");
+        }
     }
 
     private void Update()
@@ -69,6 +107,7 @@ public class PlayerHealth : MonoBehaviour
         if (amount <= 0) return;
 
         currentHealth = Mathf.Max(0, currentHealth - amount);
+        if (!isDead && currentHealth > 0) savedHealth = currentHealth;
         Debug.Log($"[PlayerHealth] Took {amount} damage. HP: {currentHealth}/{maxHealth}");
 
         OnHealthChanged?.Invoke(currentHealth, maxHealth);
@@ -90,6 +129,7 @@ public class PlayerHealth : MonoBehaviour
         if (amount <= 0) return;
 
         currentHealth = Mathf.Max(0, currentHealth - amount);
+        if (!isDead && currentHealth > 0) savedHealth = currentHealth;
         OnHealthChanged?.Invoke(currentHealth, maxHealth);
         OnPlayerDamaged?.Invoke();
 
@@ -110,6 +150,7 @@ public class PlayerHealth : MonoBehaviour
         if (amount <= 0) return;
 
         currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
+        if (!isDead && currentHealth > 0) savedHealth = currentHealth;
         Debug.Log($"[PlayerHealth] Healed {amount}. HP: {currentHealth}/{maxHealth}");
         OnHealthChanged?.Invoke(currentHealth, maxHealth);
     }
@@ -122,6 +163,7 @@ public class PlayerHealth : MonoBehaviour
         if (isDead) return;
         isDead = true;
         currentHealth = 0;
+        savedHealth = -1; // Reset để khi chơi lại hồi đủ máu
         Debug.Log("[PlayerHealth] Player died.");
 
         // 1. Báo GameManager TRƯỚC (để các hệ thống khác biết đã Game Over)

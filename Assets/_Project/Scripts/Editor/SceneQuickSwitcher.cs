@@ -1538,6 +1538,15 @@ public static class SceneQuickSwitcher
         var cardGO = GameObject.Find("Item_EngineerCard");
         if (cardGO == null)
         {
+            var secGO = GameObject.Find("Item_SecurityCard");
+            if (secGO != null)
+            {
+                cardGO = secGO;
+                cardGO.name = "Item_EngineerCard";
+            }
+        }
+        if (cardGO == null)
+        {
             var logGO = GameObject.Find("Item_EngineerLog");
             if (logGO != null)
             {
@@ -1574,6 +1583,10 @@ public static class SceneQuickSwitcher
         so.FindProperty("bobAmount").floatValue = 0.08f;
         so.FindProperty("rotateSpeed").floatValue = 60f;
         so.ApplyModifiedProperties();
+
+        var oldRoot = cardGO.transform.Find("PSX_ModelRoot");
+        if (oldRoot != null) Object.DestroyImmediate(oldRoot.gameObject);
+        pickup.EnsurePSXItemVisuals();
 
         EditorUtility.SetDirty(cardGO);
     }

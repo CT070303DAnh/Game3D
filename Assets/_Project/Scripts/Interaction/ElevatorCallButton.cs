@@ -25,7 +25,7 @@ public class ElevatorCallButton : MonoBehaviour, IInteractable
             if (isDoorOpened) return "Cửa thang máy đã mở";
             if (ToxicGasManager.OpenValvesCount > 0) return $"Nút gọi Thang Máy [E] (CÒN {ToxicGasManager.OpenValvesCount} VAN KHÍ)";
             if (!CircuitBreaker.IsPowerOn) return "Nút gọi Thang Máy [E] (CHƯA CÓ ĐIỆN - CẦN BẬT CẦU DAO)";
-            bool hasCard = GameState.Instance != null && GameState.Instance.EngineerCardCollected;
+            bool hasCard = GameState.Instance != null && (GameState.Instance.EngineerCardCollected || GameState.Instance.SecurityCardCollected);
             if (!hasCard) return "Nút gọi Thang Máy [E] (CẦN THẺ KỸ SƯ)";
             return "Quẹt Thẻ Kỹ Sư & Mở Cửa Thang Máy [E]";
         }
@@ -74,7 +74,7 @@ public class ElevatorCallButton : MonoBehaviour, IInteractable
         }
 
         // 3. Kiem tra The Ky Su
-        bool hasCard = GameState.Instance != null && GameState.Instance.EngineerCardCollected;
+        bool hasCard = GameState.Instance != null && (GameState.Instance.EngineerCardCollected || GameState.Instance.SecurityCardCollected);
         if (!hasCard)
         {
             GameAudioManager.PlayTerminalError(transform.position);

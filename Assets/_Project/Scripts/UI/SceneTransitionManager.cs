@@ -131,6 +131,19 @@ public class SceneTransitionManager : MonoBehaviour
         isTransitioning = true;
         Time.timeScale = 1f;
 
+        if (isRestart)
+        {
+            PlayerHealth.ResetSavedHealth();
+        }
+        else
+        {
+            var ph = Object.FindFirstObjectByType<PlayerHealth>();
+            if (ph != null && !ph.IsDead && ph.CurrentHealth > 0)
+            {
+                PlayerHealth.SetSavedHealth(ph.CurrentHealth);
+            }
+        }
+
         GetSectorInfo(sceneName, isRestart, out string defaultTitle, out string defaultSubtitle, out string codeName);
         string displayTitle = !string.IsNullOrEmpty(customTitle) ? customTitle : defaultTitle;
         string displaySubtitle = !string.IsNullOrEmpty(customSubtitle) ? customSubtitle : defaultSubtitle;

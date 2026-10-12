@@ -133,6 +133,7 @@ public class GameManager : MonoBehaviour
         Time.timeScale = 1f;
 
         LeaderboardManager.StartNewRun();
+        PlayerHealth.ResetSavedHealth();
 
         string startScene = levelScenes.Length > 0 ? levelScenes[0] : gameplayScene;
 
@@ -282,6 +283,7 @@ public class GameManager : MonoBehaviour
     {
         CurrentPhase = GamePhase.MainMenu;
         Time.timeScale = 1f;
+        PlayerHealth.ResetSavedHealth();
         SceneManager.LoadScene(mainMenuScene);
         Debug.Log("[GameManager] Returning to Main Menu.");
     }
@@ -290,6 +292,7 @@ public class GameManager : MonoBehaviour
     {
         CurrentPhase = GamePhase.Playing;
         Time.timeScale = 1f;
+        PlayerHealth.ResetSavedHealth();
 
         // Chơi lại ĐÚNG màn vừa thua: luôn dùng scene đang mở
         string sceneToReload = SceneManager.GetActiveScene().name;

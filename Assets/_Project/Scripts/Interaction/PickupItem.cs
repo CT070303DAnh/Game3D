@@ -61,6 +61,12 @@ public class PickupItem : MonoBehaviour, IInteractable
                 pickupMessage = "✓ ĐÃ NHẶT CỜ LÊ SỬA CHỮA! Hãy dùng Cờ Lê để vặn khóa 3 van xả khí độc.";
             }
         }
+        else if (n.Contains("engineer") || n.Contains("kisu") || n.Contains("technician"))
+        {
+            itemType = ItemType.EngineerCard;
+            itemName = "Thẻ Kỹ Sư (Engineer Card)";
+            pickupMessage = "✓ ĐÃ NHẶT THẺ KỸ SƯ! Dùng để quẹt mở cửa Thang Máy (Màn 2).";
+        }
         else if (n.Contains("card") || n.Contains("thebao"))
         {
             itemType = ItemType.SecurityCard;
@@ -97,12 +103,6 @@ public class PickupItem : MonoBehaviour, IInteractable
             {
                 pickupMessage = "✓ ĐÃ NHẶT GIẤY GHI CHÚ MẬT MÃ! Hãy mang tới Security Terminal (sau khi bật điện) để tra cứu dữ liệu.";
             }
-        }
-        else if (n.Contains("engineer") || n.Contains("kisu") || n.Contains("technician"))
-        {
-            itemType = ItemType.EngineerCard;
-            itemName = "Thẻ Kỹ Sư (Engineer Card)";
-            pickupMessage = "✓ ĐÃ NHẶT THẺ KỸ SƯ! Dùng để quẹt mở cửa Thang Máy (Màn 2).";
         }
         else if (n.Contains("medkit") || n.Contains("firstaid") || n.Contains("cuuthuong") || n.Contains("health"))
         {
@@ -310,6 +310,11 @@ public class PickupItem : MonoBehaviour, IInteractable
                             if (tex != null) mat.SetTexture("_BaseMap", tex);
                             mat.SetColor("_BaseColor", col);
                         }
+
+                        if (itemType == ItemType.EngineerCard)
+                        {
+                            mat.SetColor("_BaseColor", new Color(1.0f, 0.85f, 0.2f));
+                        }
                     }
                 }
             }
@@ -326,7 +331,17 @@ public class PickupItem : MonoBehaviour, IInteractable
                 l.color = GetGlowColorForItem(itemType);
             }
 
-            if (transform.Find("Item3DLabel") == null)
+            var existingLabel = transform.Find("Item3DLabel");
+            if (existingLabel != null)
+            {
+                var tm = existingLabel.GetComponent<TextMesh>();
+                if (tm != null)
+                {
+                    tm.text = $"[ {itemName} ]";
+                    tm.color = GetGlowColorForItem(itemType);
+                }
+            }
+            else
             {
                 var lblGO = new GameObject("Item3DLabel");
                 lblGO.transform.SetParent(transform, false);

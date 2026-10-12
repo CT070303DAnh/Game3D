@@ -11,7 +11,7 @@ using System.Collections;
 [RequireComponent(typeof(Animator))]
 public class Door : MonoBehaviour, IInteractable
 {
-    public enum DoorRequirement { None, SecurityCard, LaboratoryKey, PowerRestored, ExitCode }
+    public enum DoorRequirement { None, SecurityCard, LaboratoryKey, PowerRestored, ExitCode, EngineerCard }
     public enum DoorState { Closed, Opening, Open, Closing }
 
     [Header("Door Settings")]
@@ -144,7 +144,8 @@ public class Door : MonoBehaviour, IInteractable
         if (GameState.Instance == null) return true;
         return requirement switch
         {
-            DoorRequirement.SecurityCard  => GameState.Instance.SecurityCardCollected,
+            DoorRequirement.SecurityCard  => GameState.Instance.SecurityCardCollected || GameState.Instance.EngineerCardCollected,
+            DoorRequirement.EngineerCard  => GameState.Instance.EngineerCardCollected || GameState.Instance.SecurityCardCollected,
             DoorRequirement.LaboratoryKey => GameState.Instance.LaboratoryKeyCollected,
             DoorRequirement.PowerRestored => GameState.Instance.PowerRestored,
             DoorRequirement.ExitCode      => GameState.Instance.ExitUnlocked,
