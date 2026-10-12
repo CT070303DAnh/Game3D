@@ -1,11 +1,11 @@
 using UnityEngine;
 
 /// <summary>
-/// WallCodeClue: Con so phan quang in tren tuong trong Man 2.
-/// Hien thi so (1, 4 hoac 2) va ky hieu thu tu (I, II, III / ①, ②, ③).
-/// Cho phep player nhin thay ro tren tuong hoac bam E de xem chi tiet.
+/// WallCodeClue: Con số phát quang in trên tường trong Màn 2.
+/// Hiển thị số và ký hiệu thứ tự trên tường dưới dạng chữ phát quang Neon.
+/// Người chơi tự quan sát bằng mắt trong phòng để giải mã, không có nút tương tác [E] và không hiện gợi ý pop-up.
 /// </summary>
-public class WallCodeClue : MonoBehaviour, IInteractable
+public class WallCodeClue : MonoBehaviour
 {
     [Header("Clue Data")]
     public string digit = "2";
@@ -16,8 +16,18 @@ public class WallCodeClue : MonoBehaviour, IInteractable
     [SerializeField] private TextMesh textMesh;
     [SerializeField] private Light glowLight;
 
-    public bool CanInteract => true;
-    public string InteractPromptText => $"Xem con số trên tường [E]";
+    private void Awake()
+    {
+        // Loại bỏ mọi collider tương tác nếu có để PlayerInteraction không bắt trúng
+        var cols = GetComponentsInChildren<Collider>(true);
+        foreach (var c in cols)
+        {
+            if (c != null && c.isTrigger)
+            {
+                Destroy(c);
+            }
+        }
+    }
 
     public void SetupClue(string num, int order, string label, Color neonCol)
     {
@@ -43,13 +53,9 @@ public class WallCodeClue : MonoBehaviour, IInteractable
         if (glowLight != null)
         {
             glowLight.color = neonCol;
-            glowLight.range = 2.5f;
-            glowLight.intensity = 1.2f;
+            glowLight.range = 3.5f;
+            glowLight.intensity = 1.8f;
         }
     }
-
-    public void Interact()
-    {
-        NotificationUI.ShowMessage($"MANH MỐI MÃ THANG MÁY: Ký hiệu {orderLabel} là số [{digit}] (Vị trí thứ {orderIndex})");
-    }
 }
+

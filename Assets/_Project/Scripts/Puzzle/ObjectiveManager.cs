@@ -30,32 +30,38 @@ public class ObjectiveManager : MonoBehaviour
 
     private void OnEnable()
     {
-        GameState.OnSecurityCardCollected += () => CompleteObjective("security_card");
-        GameState.OnFuseCollected         += () => CompleteObjective("fuse");
-        GameState.OnPowerRestored         += () => CompleteObjective("power");
-        GameState.OnAccessCodeSolved      += () => CompleteObjective("access_code");
-        GameState.OnExitUnlocked          += () => CompleteObjective("exit");
-        GameState.OnJetFuelCollected      += () => CompleteObjective("fuel");
-        GameState.OnWrenchCollected       += () => CompleteObjective("wrench");
-        GameState.OnRadarActivated        += () => CompleteObjective("radar");
-        GameState.OnDomeGateOpened        += () => CompleteObjective("dome_gate");
-        GameState.OnHelipadEscaped        += () => CompleteObjective("helipad_escape");
-        GameManager.OnGameStart           += InitObjectives;
+        GameState.OnSecurityCardCollected   += () => CompleteObjective("security_card");
+        GameState.OnEngineerCardCollected   += () => CompleteObjective("engineer_card");
+        GameState.OnFuseCollected           += () => CompleteObjective("fuse");
+        GameState.OnAccessCodeFound         += () => CompleteObjective("pickup_note");
+        GameState.OnPowerRestored           += () => CompleteObjective("power");
+        GameState.OnSecurityTerminalViewed  += () => CompleteObjective("security_terminal");
+        GameState.OnAccessCodeSolved        += () => CompleteObjective("access_code");
+        GameState.OnExitUnlocked            += () => CompleteObjective("exit");
+        GameState.OnJetFuelCollected        += () => CompleteObjective("fuel");
+        GameState.OnWrenchCollected         += () => CompleteObjective("wrench");
+        GameState.OnRadarActivated          += () => CompleteObjective("radar");
+        GameState.OnDomeGateOpened          += () => CompleteObjective("dome_gate");
+        GameState.OnHelipadEscaped          += () => CompleteObjective("helipad_escape");
+        GameManager.OnGameStart             += InitObjectives;
     }
 
     private void OnDisable()
     {
-        GameState.OnSecurityCardCollected -= () => CompleteObjective("security_card");
-        GameState.OnFuseCollected         -= () => CompleteObjective("fuse");
-        GameState.OnPowerRestored         -= () => CompleteObjective("power");
-        GameState.OnAccessCodeSolved      -= () => CompleteObjective("access_code");
-        GameState.OnExitUnlocked          -= () => CompleteObjective("exit");
-        GameState.OnJetFuelCollected      -= () => CompleteObjective("fuel");
-        GameState.OnWrenchCollected       -= () => CompleteObjective("wrench");
-        GameState.OnRadarActivated        -= () => CompleteObjective("radar");
-        GameState.OnDomeGateOpened        -= () => CompleteObjective("dome_gate");
-        GameState.OnHelipadEscaped        -= () => CompleteObjective("helipad_escape");
-        GameManager.OnGameStart           -= InitObjectives;
+        GameState.OnSecurityCardCollected   -= () => CompleteObjective("security_card");
+        GameState.OnEngineerCardCollected   -= () => CompleteObjective("engineer_card");
+        GameState.OnFuseCollected           -= () => CompleteObjective("fuse");
+        GameState.OnAccessCodeFound         -= () => CompleteObjective("pickup_note");
+        GameState.OnPowerRestored           -= () => CompleteObjective("power");
+        GameState.OnSecurityTerminalViewed  -= () => CompleteObjective("security_terminal");
+        GameState.OnAccessCodeSolved        -= () => CompleteObjective("access_code");
+        GameState.OnExitUnlocked            -= () => CompleteObjective("exit");
+        GameState.OnJetFuelCollected        -= () => CompleteObjective("fuel");
+        GameState.OnWrenchCollected         -= () => CompleteObjective("wrench");
+        GameState.OnRadarActivated          -= () => CompleteObjective("radar");
+        GameState.OnDomeGateOpened          -= () => CompleteObjective("dome_gate");
+        GameState.OnHelipadEscaped          -= () => CompleteObjective("helipad_escape");
+        GameManager.OnGameStart             -= InitObjectives;
     }
 
     private void Start() => InitObjectives();
@@ -68,16 +74,29 @@ public class ObjectiveManager : MonoBehaviour
         if (sceneName.Contains("Level2") || sceneName.Contains("Reactor"))
         {
             objectives.Add(new Objective("wrench", "Tìm Cờ Lê Sửa Chữa (Wrench) tại Kho Phụ Tùng"));
-            objectives.Add(new Objective("valves", "Dùng Cờ Lê Khóa 3 Van Xả Khí Độc (Ngừng ngạt khí)"));
-            objectives.Add(new Objective("fuse", "Tìm Cầu Chì Thang Máy (Power Fuse)"));
-            objectives.Add(new Objective("power", "Đóng Cầu Dao Điện Tổng"));
-            objectives.Add(new Objective("wall_numbers", "Tìm 3 Con Số Trên Tường (1, 4, 2)"));
-            objectives.Add(new Objective("call_elevator", "Bấm Nút Mở Cửa Thang Máy"));
-            objectives.Add(new Objective("elevator_code", "Vào Thang Máy & Nhập Mã [2 1 4]"));
+            objectives.Add(new Objective("valves", "Dùng Cờ Lê Khóa 2 Van Xả Khí Độc (Ngừng ngạt khí)"));
+            objectives.Add(new Objective("fuse", "Tìm Cầu Chì Cao Áp (Power Fuse)"));
+            objectives.Add(new Objective("power", "Lắp Cầu Chì & Bật Cầu Dao Điện Tổng (Phòng Bên Phải)"));
+            objectives.Add(new Objective("engineer_card", "Tìm Thẻ Kỹ Sư (Engineer Card)"));
+            objectives.Add(new Objective("wall_numbers", "Ghi Nhớ Các Con Số Mật Mã Trên Tường"));
+            objectives.Add(new Objective("call_elevator", "Quẹt Thẻ Kỹ Sư & Mở Cửa Thang Máy"));
+            objectives.Add(new Objective("elevator_code", "Vào Thang Máy & Nhập Mật Mã Mở Khóa"));
 
             if (GameState.Instance != null && GameState.Instance.WrenchCollected)
             {
                 CompleteObjective("wrench");
+            }
+            if (GameState.Instance != null && GameState.Instance.FuseCollected)
+            {
+                CompleteObjective("fuse");
+            }
+            if (GameState.Instance != null && GameState.Instance.PowerRestored)
+            {
+                CompleteObjective("power");
+            }
+            if (GameState.Instance != null && GameState.Instance.EngineerCardCollected)
+            {
+                CompleteObjective("engineer_card");
             }
         }
         else if (sceneName.Contains("Level3") || sceneName.Contains("Helipad"))
@@ -89,10 +108,12 @@ public class ObjectiveManager : MonoBehaviour
         }
         else
         {
-            objectives.Add(new Objective("security_card", "Tìm Thẻ Bảo Mật (Security Card - Phòng B)"));
-            objectives.Add(new Objective("fuse", "Tìm Cầu Chì (Power Fuse - Phòng A)"));
-            objectives.Add(new Objective("power", "Lắp Cầu Chì & Bật Máy Phát Điện (Phòng A)"));
-            objectives.Add(new Objective("access_code", "Giải Mã Màu Tại Terminal Cửa Thoát Hiểm (BLUE ➔ RED ➔ GREEN)"));
+            objectives.Add(new Objective("security_card", "Tìm Thẻ Bảo Mật (Security Card)"));
+            objectives.Add(new Objective("fuse", "Tìm Cầu Chì Cao Áp (Power Fuse)"));
+            objectives.Add(new Objective("pickup_note", "Tìm Giấy Ghi Chú Mật Mã (Access Code Note)"));
+            objectives.Add(new Objective("power", "Lắp Cầu Chì & Bật Máy Phát Điện Cấp Nguồn"));
+            objectives.Add(new Objective("security_terminal", "Xem Dữ Liệu Tại Security Terminal"));
+            objectives.Add(new Objective("access_code", "Giải Mã Màu Tại Terminal Cửa Thoát Hiểm"));
             objectives.Add(new Objective("exit", "Mở Cửa Thoát Hiểm Rời Khỏi Phòng Lab!"));
         }
 

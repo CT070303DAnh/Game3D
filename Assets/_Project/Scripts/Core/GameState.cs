@@ -23,12 +23,14 @@ public class GameState : MonoBehaviour
     [SerializeField] private bool accessCodeFound;
     [SerializeField] private bool jetFuelCollected;
     [SerializeField] private bool wrenchCollected;
+    [SerializeField] private bool engineerCardCollected;
 
     // ───────────────────────────────────────────────
     // Puzzle / World State
     // ───────────────────────────────────────────────
     [Header("World State")]
     [SerializeField] private bool powerRestored;
+    [SerializeField] private bool securityTerminalViewed;
     [SerializeField] private bool accessCodeSolved;
     [SerializeField] private bool exitUnlocked;
     [SerializeField] private bool radarActivated;
@@ -40,11 +42,14 @@ public class GameState : MonoBehaviour
     // ───────────────────────────────────────────────
     public static event System.Action OnSecurityCardCollected;
     public static event System.Action OnFuseCollected;
+    public static event System.Action OnAccessCodeFound;
     public static event System.Action OnPowerRestored;
+    public static event System.Action OnSecurityTerminalViewed;
     public static event System.Action OnAccessCodeSolved;
     public static event System.Action OnExitUnlocked;
     public static event System.Action OnJetFuelCollected;
     public static event System.Action OnWrenchCollected;
+    public static event System.Action OnEngineerCardCollected;
     public static event System.Action OnRadarActivated;
     public static event System.Action OnDomeGateOpened;
     public static event System.Action OnHelipadEscaped;
@@ -59,7 +64,9 @@ public class GameState : MonoBehaviour
     public bool AccessCodeFound => accessCodeFound;
     public bool JetFuelCollected => jetFuelCollected;
     public bool WrenchCollected => wrenchCollected;
+    public bool EngineerCardCollected => engineerCardCollected;
     public bool PowerRestored => powerRestored;
+    public bool SecurityTerminalViewed => securityTerminalViewed;
     public bool AccessCodeSolved => accessCodeSolved;
     public bool ExitUnlocked => exitUnlocked;
     public bool RadarActivated => radarActivated;
@@ -127,10 +134,12 @@ public class GameState : MonoBehaviour
         laboratoryKeyCollected = false;
         accessCodeFound = false;
         powerRestored = false;
+        securityTerminalViewed = false;
         accessCodeSolved = false;
         exitUnlocked = false;
         jetFuelCollected = false;
         wrenchCollected = false;
+        engineerCardCollected = false;
         radarActivated = false;
         domeGateOpened = false;
         helipadEscaped = false;
@@ -180,11 +189,20 @@ public class GameState : MonoBehaviour
         OnWrenchCollected?.Invoke();
     }
 
+    public void CollectEngineerCard()
+    {
+        if (engineerCardCollected) return;
+        engineerCardCollected = true;
+        Debug.Log("[GameState] Engineer Card collected.");
+        OnEngineerCardCollected?.Invoke();
+    }
+
     public void SetAccessCodeFound()
     {
         if (accessCodeFound) return;
         accessCodeFound = true;
         Debug.Log("[GameState] Access Code found.");
+        OnAccessCodeFound?.Invoke();
     }
 
     public void SetPowerRestored()
@@ -196,6 +214,14 @@ public class GameState : MonoBehaviour
     }
 
     public void RestorePower() => SetPowerRestored();
+
+    public void SetSecurityTerminalViewed()
+    {
+        if (securityTerminalViewed) return;
+        securityTerminalViewed = true;
+        Debug.Log("[GameState] Security Terminal Viewed!");
+        OnSecurityTerminalViewed?.Invoke();
+    }
 
     public void SetAccessCodeSolved()
     {

@@ -106,7 +106,7 @@ public class ElevatorKeypadUI : MonoBehaviour
 
         if (Instance.statusText != null)
         {
-            Instance.statusText.text = "Gợi ý: Tìm 3 chữ số ① ➔ ② ➔ ③ trên tường";
+            Instance.statusText.text = "Vui lòng nhập mật mã thang máy gồm 3 chữ số:";
             Instance.statusText.color = new Color(0.2f, 0.8f, 1f);
         }
 
@@ -244,7 +244,7 @@ public class ElevatorKeypadUI : MonoBehaviour
                 statusText.text = "✗ TỪ CHỐI TRUY CẬP - SAI MÃ!";
                 statusText.color = new Color(1f, 0.2f, 0.2f);
             }
-            NotificationUI.ShowMessage("SAI MÃ THANG MÁY! Xem lại các số trên tường.");
+            NotificationUI.ShowMessage("✗ MẬT MÃ KHÔNG CHÍNH XÁC! Hãy thử lại.");
             StartCoroutine(ResetAfterWrongCode());
         }
     }
@@ -256,7 +256,7 @@ public class ElevatorKeypadUI : MonoBehaviour
         UpdateDisplay();
         if (statusText != null)
         {
-            statusText.text = "Gợi ý: Tìm 3 chữ số ① ➔ ② ➔ ③ trên tường";
+            statusText.text = "Vui lòng nhập mật mã thang máy gồm 3 chữ số:";
             statusText.color = new Color(0.2f, 0.8f, 1f);
         }
     }

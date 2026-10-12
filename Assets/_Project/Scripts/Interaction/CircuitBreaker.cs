@@ -18,7 +18,7 @@ public class CircuitBreaker : MonoBehaviour, IInteractable
     private bool isSwitchedOn = false;
     private bool isAnimating = false;
 
-    public static bool IsPowerOn => Instance != null ? Instance.isSwitchedOn : (GameState.Instance != null && GameState.Instance.PowerRestored);
+    public static bool IsPowerOn => (Instance != null && Instance.isSwitchedOn) || (GameState.Instance != null && GameState.Instance.PowerRestored);
 
     public bool CanInteract => !isSwitchedOn && !isAnimating;
 
@@ -26,9 +26,9 @@ public class CircuitBreaker : MonoBehaviour, IInteractable
     {
         get
         {
-            if (isSwitchedOn) return "Cầu Dao Điện Tổng (Đã cấp điện)";
+            if (isSwitchedOn) return "Cầu Dao Điện Tổng [ĐÃ CẤP ĐIỆN]";
             bool hasFuse = GameState.Instance != null && GameState.Instance.FuseCollected;
-            return hasFuse ? "Lắp Cầu Chì & Đóng Cầu Dao Điện [E]" : "Cầu Dao Điện Tổng (Thiếu Cầu Chì) [E]";
+            return hasFuse ? "Lắp Cầu Chì & Đóng Cầu Dao Điện [E]" : "Cầu Dao Điện Tổng (Cần Cầu Chì) [E]";
         }
     }
 
@@ -45,8 +45,12 @@ public class CircuitBreaker : MonoBehaviour, IInteractable
         if (col == null)
         {
             var bc = gameObject.AddComponent<BoxCollider>();
-            bc.size = new Vector3(1.4f, 1.6f, 1.0f);
+            bc.size = new Vector3(2.0f, 2.0f, 1.6f);
             bc.isTrigger = true;
+        }
+        else
+        {
+            col.isTrigger = true;
         }
     }
 
@@ -70,11 +74,30 @@ public class CircuitBreaker : MonoBehaviour, IInteractable
         if (!hasFuse)
         {
             GameAudioManager.PlayTerminalError(transform.position);
-            NotificationUI.ShowMessage("CẢNH BÁO: Tủ điện bị thiếu CẦU CHÌ (Fuse)! Hãy tìm Cầu Chì trong phòng để lắp vào.");
+            NotificationUI.ShowMessage("❌ THIẾU CẦU CHÌ! Hãy tìm Cầu Chì Cao Áp (Power Fuse) trong phòng để lắp vào.");
+            AudioSource audio = GetComponent<AudioSource>();
+            if (audio == null)
+            {
+                audio = gameObject.AddComponent<AudioSource>();
+                audio.spatialBlend = 0.8f;
+            }
+            audio.pitch = 0.6f;
+            audio.Play();
             return;
         }
 
         StartCoroutine(SwitchOnRoutine());
+    }
+
+    public void ForcePowerOn()
+    {
+        if (isSwitchedOn) return;
+        isSwitchedOn = true;
+        if (switchLever != null) switchLever.localRotation *= Quaternion.Euler(60f, 0, 0);
+        if (sparkVFX != null) sparkVFX.Play();
+        GameState.Instance?.SetPowerRestored();
+        UpdateVisual();
+        ObjectiveManager.Instance?.CompleteObjective("power");
     }
 
     private IEnumerator SwitchOnRoutine()
@@ -92,11 +115,11 @@ public class CircuitBreaker : MonoBehaviour, IInteractable
         }
         audio.pitch = 0.9f;
 
-        // Gat can cau dao xuong
+        // Gạt cần cầu dao xuống (0.5 giây)
         if (switchLever != null)
         {
             float elapsed = 0f;
-            float duration = 0.6f;
+            float duration = 0.5f;
             Quaternion startRot = switchLever.localRotation;
             Quaternion endRot = startRot * Quaternion.Euler(60f, 0, 0);
 
@@ -109,7 +132,7 @@ public class CircuitBreaker : MonoBehaviour, IInteractable
             switchLever.localRotation = endRot;
         }
 
-        // Tia lua dien
+        // Tia lửa điện
         if (sparkVFX != null)
         {
             sparkVFX.Play();
@@ -123,7 +146,7 @@ public class CircuitBreaker : MonoBehaviour, IInteractable
         UpdateVisual();
         isAnimating = false;
 
-        NotificationUI.ShowMessage("✓ ĐÃ ĐÓNG CẦU DAO TỔNG! Nguồn điện Thang Máy đã được phục hồi.");
+        NotificationUI.ShowMessage("✓ ĐÃ LẮP CẦU CHÌ & BẬT CẦU DAO TỔNG! Nguồn điện Thang Máy đã được phục hồi.");
         ObjectiveManager.Instance?.CompleteObjective("power");
     }
 

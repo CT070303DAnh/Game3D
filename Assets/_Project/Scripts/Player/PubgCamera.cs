@@ -183,8 +183,8 @@ public class PubgCamera : MonoBehaviour
 
         Quaternion rot = Quaternion.Euler(pitch, yaw, 0f);
 
-        // Pivot = vai phai nhan vat (PUBG shoulder cam)
-        Vector3 pivot = target.position + target.TransformDirection(shoulderOffset);
+        // Pivot = vai phai nhan vat (PUBG shoulder cam theo camera yaw, khong bi giat khi nhan vat quay huong)
+        Vector3 pivot = target.position + Vector3.up * shoulderOffset.y + (Quaternion.Euler(0f, yaw, 0f) * Vector3.right) * shoulderOffset.x;
 
         // Vi tri mong muon
         Vector3 desired = pivot - rot * Vector3.forward * distance;

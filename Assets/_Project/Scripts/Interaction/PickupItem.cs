@@ -7,7 +7,7 @@ using UnityEngine;
 /// </summary>
 public class PickupItem : MonoBehaviour, IInteractable
 {
-    public enum ItemType { SecurityCard, Fuse, Battery, AccessCode, LaboratoryKey, EngineerNote, Medkit, Wrench, JetFuel }
+    public enum ItemType { SecurityCard, Fuse, Battery, AccessCode, LaboratoryKey, EngineerNote, Medkit, Wrench, JetFuel, EngineerCard }
 
     [Header("Item Settings")]
     [SerializeField] private ItemType itemType = ItemType.SecurityCard;
@@ -89,6 +89,28 @@ public class PickupItem : MonoBehaviour, IInteractable
             itemType = ItemType.LaboratoryKey;
             itemName = "Chìa Khóa Phòng Lab";
         }
+        else if (n.Contains("note") || n.Contains("code") || n.Contains("disk") || n.Contains("access") || n.Contains("ghichu"))
+        {
+            itemType = ItemType.AccessCode;
+            itemName = "Giấy Ghi Chú Mật Mã (Access Code Note)";
+            if (string.IsNullOrEmpty(pickupMessage) || pickupMessage.Contains("Vật phẩm"))
+            {
+                pickupMessage = "✓ ĐÃ NHẶT GIẤY GHI CHÚ MẬT MÃ! Hãy mang tới Security Terminal (sau khi bật điện) để tra cứu dữ liệu.";
+            }
+        }
+        else if (n.Contains("engineer") || n.Contains("kisu") || n.Contains("technician"))
+        {
+            itemType = ItemType.EngineerCard;
+            itemName = "Thẻ Kỹ Sư (Engineer Card)";
+            pickupMessage = "✓ ĐÃ NHẶT THẺ KỸ SƯ! Dùng để quẹt mở cửa Thang Máy (Màn 2).";
+        }
+        else if (n.Contains("medkit") || n.Contains("firstaid") || n.Contains("cuuthuong") || n.Contains("health"))
+        {
+            itemType = ItemType.Medkit;
+            itemName = "Túi Cứu Thương (First Aid Kit)";
+            pickupMessage = "✓ ĐÃ DÙNG TÚI CỨU THƯƠNG (+50 HP)! Phục hồi máu.";
+            healAmount = 50;
+        }
         else if (n.Contains("battery") || n.Contains("pin"))
         {
             itemType = ItemType.Battery;
@@ -165,6 +187,9 @@ public class PickupItem : MonoBehaviour, IInteractable
             case ItemType.Wrench:
                 GameState.Instance?.CollectWrench();
                 break;
+            case ItemType.EngineerCard:
+                GameState.Instance?.CollectEngineerCard();
+                break;
             case ItemType.EngineerNote:
                 // Thong bao da duoc hien thi qua pickupMessage
                 break;
@@ -233,6 +258,16 @@ public class PickupItem : MonoBehaviour, IInteractable
                 localScale = Vector3.one * 6.4f;
                 localRot = Quaternion.Euler(0f, 0f, 0f);
                 break;
+            case ItemType.EngineerCard:
+                modelResourceName = "ItemModels/Model_SecurityCard";
+                localScale = Vector3.one * 7.0f;
+                localRot = Quaternion.Euler(20f, 0f, 15f);
+                break;
+            case ItemType.Medkit:
+                modelResourceName = "ItemModels/Model_Medkit";
+                localScale = Vector3.one * 0.45f;
+                localRot = Quaternion.Euler(0f, 0f, 0f);
+                break;
         }
 
         GameObject prefab = !string.IsNullOrEmpty(modelResourceName) ? Resources.Load<GameObject>(modelResourceName) : null;
@@ -251,7 +286,7 @@ public class PickupItem : MonoBehaviour, IInteractable
             root.transform.localScale = localScale;
 
             var inst = Instantiate(prefab, root.transform);
-            inst.transform.localPosition = Vector3.zero;
+            inst.transform.localPosition = itemType == ItemType.Medkit ? new Vector3(0, -0.6f, 0) : Vector3.zero;
             inst.transform.localRotation = Quaternion.identity;
             inst.transform.localScale = Vector3.one;
 
@@ -323,6 +358,8 @@ public class PickupItem : MonoBehaviour, IInteractable
             case ItemType.Battery: return new Color(0.3f, 1f, 0.4f);
             case ItemType.LaboratoryKey: return new Color(0.9f, 0.8f, 0.3f);
             case ItemType.AccessCode:
+            case ItemType.EngineerCard: return new Color(1.0f, 0.85f, 0.2f);
+            case ItemType.Medkit: return new Color(0.2f, 1f, 0.4f);
             case ItemType.EngineerNote: return new Color(0.3f, 0.7f, 1f);
             default: return Color.white;
         }

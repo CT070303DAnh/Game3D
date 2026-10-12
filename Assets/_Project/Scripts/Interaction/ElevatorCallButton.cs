@@ -18,7 +18,18 @@ public class ElevatorCallButton : MonoBehaviour, IInteractable
 
     public bool CanInteract => !isDoorOpened;
 
-    public string InteractPromptText => isDoorOpened ? "Cửa thang máy đã mở" : "Bấm nút mở cửa Thang Máy [E]";
+    public string InteractPromptText
+    {
+        get
+        {
+            if (isDoorOpened) return "Cửa thang máy đã mở";
+            if (ToxicGasManager.OpenValvesCount > 0) return $"Nút gọi Thang Máy [E] (CÒN {ToxicGasManager.OpenValvesCount} VAN KHÍ)";
+            if (!CircuitBreaker.IsPowerOn) return "Nút gọi Thang Máy [E] (CHƯA CÓ ĐIỆN - CẦN BẬT CẦU DAO)";
+            bool hasCard = GameState.Instance != null && GameState.Instance.EngineerCardCollected;
+            if (!hasCard) return "Nút gọi Thang Máy [E] (CẦN THẺ KỸ SƯ)";
+            return "Quẹt Thẻ Kỹ Sư & Mở Cửa Thang Máy [E]";
+        }
+    }
 
     public void SetupReferences(Light light, Renderer rend)
     {
@@ -49,33 +60,50 @@ public class ElevatorCallButton : MonoBehaviour, IInteractable
         // 1. Kiem tra van xa khi
         if (ToxicGasManager.OpenValvesCount > 0)
         {
-            NotificationUI.ShowMessage($"CẢNH BÁO: Áp suất khí độc quá cao ({ToxicGasManager.OpenValvesCount}/3 van còn xả)! Hãy đóng hết 3 van trước khi gọi thang.");
+            GameAudioManager.PlayTerminalError(transform.position);
+            NotificationUI.ShowMessage($"CẢNH BÁO: Còn {ToxicGasManager.OpenValvesCount} van đang xả khí độc! Hãy dùng Cờ Lê đóng hết các van trước khi gọi thang.");
             return;
         }
 
-        // 2. Kiem tra cau dao dien tong
+        // 2. Kiem tra nguon dien cau dao tong
         if (!CircuitBreaker.IsPowerOn)
         {
-            NotificationUI.ShowMessage("CẢNH BÁO: Thang máy chưa có điện! Hãy tìm CẦU CHÌ và bật CẦU DAO ĐIỆN TỔNG.");
+            GameAudioManager.PlayTerminalError(transform.position);
+            NotificationUI.ShowMessage("❌ THANG MÁY CHƯA CÓ ĐIỆN! Hãy tìm CẦU CHÌ và bật CẦU DAO ĐIỆN TỔNG (Phòng Bên Phải) trước khi gọi thang.");
             return;
         }
 
-        // Du dieu kien -> Mo cua thang may
+        // 3. Kiem tra The Ky Su
+        bool hasCard = GameState.Instance != null && GameState.Instance.EngineerCardCollected;
+        if (!hasCard)
+        {
+            GameAudioManager.PlayTerminalError(transform.position);
+            NotificationUI.ShowMessage("❌ TRUY CẬP BỊ TỪ CHỐI! Cần có 'Thẻ Kỹ Sư' (Engineer Card) để quẹt mở cửa Thang Máy.");
+            return;
+        }
+
+        // Đủ toàn bộ 3 điều kiện -> Mở cửa thang máy!
         isDoorOpened = true;
         UpdateVisual();
+
+        GameAudioManager.PlayDoorUnlock(transform.position);
 
         if (ElevatorController.Instance != null)
         {
             ElevatorController.Instance.OpenElevatorDoor();
         }
 
-        NotificationUI.ShowMessage("✓ CỬA THANG MÁY ĐÃ MỞ! Hãy bước vào buồng thang máy.");
+        NotificationUI.ShowMessage("✓ XÁC THỰC THẺ KỸ SƯ THÀNH CÔNG! CỬA THANG MÁY ĐÃ MỞ!");
+        ObjectiveManager.Instance?.CompleteObjective("engineer_card");
+        ObjectiveManager.Instance?.CompleteObjective("wall_numbers");
         ObjectiveManager.Instance?.CompleteObjective("call_elevator");
     }
 
     private void UpdateVisual()
     {
-        Color col = isDoorOpened ? Color.green : (CircuitBreaker.IsPowerOn && ToxicGasManager.IsAirSafe ? Color.cyan : Color.red);
+        bool hasCard = GameState.Instance != null && GameState.Instance.EngineerCardCollected;
+        bool allReady = CircuitBreaker.IsPowerOn && ToxicGasManager.IsAirSafe && hasCard;
+        Color col = isDoorOpened ? Color.green : (allReady ? Color.cyan : Color.red);
         if (buttonLight != null)
         {
             buttonLight.color = col;

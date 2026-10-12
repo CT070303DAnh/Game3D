@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using System.IO;
+using System.Collections.Generic;
 
 /// <summary>
 /// SceneQuickSwitcher: Menu tiện ích cho phép chuyển nhanh giữa các Scene trong Unity Editor,
@@ -50,6 +51,7 @@ public static class SceneQuickSwitcher
         if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
         {
             EditorSceneManager.OpenScene(SCENE_LEVEL3);
+            EnsureLevel3Upgraded(false);
             SyncCurrentSceneUI();
         }
     }
@@ -95,6 +97,12 @@ public static class SceneQuickSwitcher
     public static void MenuUpgradeLevel2()
     {
         EnsureLevel2Upgraded(true);
+    }
+
+    [MenuItem("EscapeTheLab/🩹 Nâng Cấp Màn 3 (Túi Cứu Thương First-Aid-Set)", false, 21)]
+    public static void MenuUpgradeLevel3()
+    {
+        EnsureLevel3Upgraded(true);
     }
 
     [MenuItem("EscapeTheLab/🎨 Đồng Bộ Vật Phẩm Retro PSX (Thẻ, Cờ Lê, Cầu Chì, Van)", false, 5)]
@@ -391,6 +399,14 @@ public static class SceneQuickSwitcher
         if (scene.name.Contains("Lab") && !scene.name.Contains("Reactor") && !scene.name.Contains("Helipad"))
         {
             OptimizeLabLighting(scene);
+        }
+
+        // 7. Đồng bộ Stylized Player Character
+        var animCtrl = PlayerStylizedUpgrader.SetupAnimatorController();
+        var av = PlayerStylizedUpgrader.GetPlayerAvatar();
+        if (animCtrl != null && av != null)
+        {
+            PlayerStylizedUpgrader.UpgradePlayerInScene(animCtrl, av);
         }
 
         EditorSceneManager.MarkSceneDirty(scene);
@@ -1188,11 +1204,25 @@ public static class SceneQuickSwitcher
             }
             var scene = EditorSceneManager.GetActiveScene();
 
-            if (showDialog) EditorUtility.DisplayProgressBar("Cập Nhật Màn 2", "Cập nhật hiệu ứng làn hơi cho 3 van...", 0.5f);
+            if (showDialog) EditorUtility.DisplayProgressBar("Cập Nhật Màn 2", "Cập nhật hiệu ứng làn hơi cho các van...", 0.5f);
             UpgradeValvesSteam(steamMat);
+
+            // Bỏ khóa van ở Trụ Tròn To Màu Đen theo yêu cầu người chơi
+            var vReactor = GameObject.Find("Valve_Reactor");
+            if (vReactor != null) Object.DestroyImmediate(vReactor);
+
+            // Giữ lại Cầu Dao Điện Tổng ở phòng bên phải (Room_Generator)
+            var cbCab = GameObject.Find("CircuitBreakerCabinet");
+            if (cbCab != null)
+            {
+                cbCab.SetActive(true);
+                if (cbCab.GetComponent<CircuitBreaker>() == null)
+                    cbCab.AddComponent<CircuitBreaker>();
+            }
 
             if (showDialog) EditorUtility.DisplayProgressBar("Cập Nhật Màn 2", "Thiết lập Bàn Kỹ Thuật & Cờ Lê 3D...", 0.7f);
             SetupTechWorkbenchAndWrench();
+            SetupEngineerCardItem();
 
             if (showDialog) EditorUtility.DisplayProgressBar("Cập Nhật Màn 2", "Lưu Scene & Project...", 0.9f);
             EditorSceneManager.MarkSceneDirty(scene);
@@ -1280,6 +1310,13 @@ public static class SceneQuickSwitcher
         var valves = Object.FindObjectsByType<CoolingValve>(FindObjectsInactive.Include);
         foreach (var valve in valves)
         {
+            if (valve == null) continue;
+            if (valve.name.Contains("Reactor") || valve.name.Contains("Core"))
+            {
+                Object.DestroyImmediate(valve.gameObject);
+                continue;
+            }
+
             var valveGO = valve.gameObject;
             Transform steamTrans = valveGO.transform.Find("SteamJet");
             GameObject steamGO;
@@ -1496,6 +1533,51 @@ public static class SceneQuickSwitcher
         EditorUtility.SetDirty(benchRoot);
     }
 
+    private static void SetupEngineerCardItem()
+    {
+        var cardGO = GameObject.Find("Item_EngineerCard");
+        if (cardGO == null)
+        {
+            var logGO = GameObject.Find("Item_EngineerLog");
+            if (logGO != null)
+            {
+                cardGO = logGO;
+                cardGO.name = "Item_EngineerCard";
+            }
+        }
+
+        if (cardGO == null)
+        {
+            cardGO = new GameObject("Item_EngineerCard");
+            cardGO.transform.position = new Vector3(-6.0f, 1.15f, -4.0f);
+        }
+
+        int intLayer = LayerMask.NameToLayer("Interactable");
+        cardGO.layer = intLayer >= 0 ? intLayer : 0;
+
+        var col = cardGO.GetComponent<Collider>();
+        if (col == null)
+        {
+            var sc = cardGO.AddComponent<SphereCollider>();
+            sc.radius = 2.5f;
+            sc.isTrigger = true;
+        }
+
+        var pickup = cardGO.GetComponent<PickupItem>();
+        if (pickup == null) pickup = cardGO.AddComponent<PickupItem>();
+
+        var so = new SerializedObject(pickup);
+        so.FindProperty("itemType").enumValueIndex = (int)PickupItem.ItemType.EngineerCard;
+        so.FindProperty("itemName").stringValue = "Thẻ Kỹ Sư (Engineer Card)";
+        so.FindProperty("pickupMessage").stringValue = "✓ ĐÃ NHẶT THẺ KỸ SƯ! Dùng để quẹt mở cửa Thang Máy (Màn 2).";
+        so.FindProperty("bobSpeed").floatValue = 2.0f;
+        so.FindProperty("bobAmount").floatValue = 0.08f;
+        so.FindProperty("rotateSpeed").floatValue = 60f;
+        so.ApplyModifiedProperties();
+
+        EditorUtility.SetDirty(cardGO);
+    }
+
     private static GameObject MakeBox(Transform parent, string name, Vector3 pos, Vector3 scale, Color color, bool isStatic)
     {
         var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -1510,6 +1592,194 @@ public static class SceneQuickSwitcher
         mat.SetFloat("_Smoothness", 0.35f);
         go.GetComponent<Renderer>().material = mat;
         return go;
+    }
+
+    public static void EnsureLevel3Upgraded(bool showDialog)
+    {
+        try
+        {
+            if (showDialog) EditorUtility.DisplayProgressBar("Cập Nhật Màn 3", "Mở Scene Level 3 Helipad...", 0.2f);
+            if (EditorSceneManager.GetActiveScene().path != SCENE_LEVEL3)
+            {
+                EditorSceneManager.OpenScene(SCENE_LEVEL3);
+            }
+            var scene = EditorSceneManager.GetActiveScene();
+
+            if (showDialog) EditorUtility.DisplayProgressBar("Cập Nhật Màn 3", "Cập nhật các Túi Cứu Thương (First-Aid-Set)...", 0.5f);
+            UpgradeLevel3Medkits();
+
+            if (showDialog) EditorUtility.DisplayProgressBar("Cập Nhật Màn 3", "Lưu Scene & Project...", 0.9f);
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            AssetDatabase.SaveAssets();
+
+            if (showDialog)
+            {
+                EditorUtility.ClearProgressBar();
+                EditorUtility.DisplayDialog("Thành Công",
+                    "ĐÃ NÂNG CẤP CÁC TÚI CỨU THƯƠNG MÀN 3!\n\n" +
+                    "• Asset: Thay thế toàn bộ bằng mô hình First-Aid-Set 3D (Đỏ, Trắng, Xanh, Biohazard).\n" +
+                    "• Đồ họa: Shader URP Lit sắc nét, đèn phát sáng Neon Green nổi bật.\n" +
+                    "• Cơ chế: Nhặt để phục hồi +50 HP khi bị robot bắn hoặc va chạm.",
+                    "OK");
+            }
+            Debug.Log("<color=green>[SceneQuickSwitcher] Nâng cấp Màn 3 (Túi Cứu Thương First-Aid-Set) hoàn tất!</color>");
+        }
+        catch (System.Exception ex)
+        {
+            if (showDialog)
+            {
+                EditorUtility.ClearProgressBar();
+                EditorUtility.DisplayDialog("Lỗi", ex.Message, "Đóng");
+            }
+            Debug.LogError("[SceneQuickSwitcher] Lỗi cập nhật Màn 3: " + ex);
+        }
+    }
+
+    private static void UpgradeLevel3Medkits()
+    {
+        string[] prefabPaths = new string[] {
+            "Assets/GeeKay3D/First-Aid-Set/Assets/Prefabs/FirstAidKit_Red.prefab",
+            "Assets/GeeKay3D/First-Aid-Set/Assets/Prefabs/FirstAidKit_White.prefab",
+            "Assets/GeeKay3D/First-Aid-Set/Assets/Prefabs/FirstAidKit_Green.prefab",
+            "Assets/GeeKay3D/First-Aid-Set/Assets/Prefabs/FirstAidKit_Biohazard.prefab"
+        };
+
+        var allPickups = Object.FindObjectsByType<PickupItem>(FindObjectsInactive.Include);
+        var medkitList = new List<GameObject>();
+
+        foreach (var p in allPickups)
+        {
+            if (p == null) continue;
+            string n = p.gameObject.name.ToLower();
+            if (n.Contains("medkit") || n.Contains("aid") || n.Contains("health"))
+            {
+                if (!medkitList.Contains(p.gameObject)) medkitList.Add(p.gameObject);
+            }
+        }
+
+        var allGOs = Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include);
+        foreach (var go in allGOs)
+        {
+            if (go == null) continue;
+            string n = go.name.ToLower();
+            if ((n.Contains("medkit") || (n.Contains("item") && n.Contains("aid"))) && !medkitList.Contains(go))
+            {
+                medkitList.Add(go);
+            }
+        }
+
+        int intLayer = LayerMask.NameToLayer("Interactable");
+        Shader urpLit = Shader.Find("Universal Render Pipeline/Lit");
+
+        for (int i = 0; i < medkitList.Count; i++)
+        {
+            var go = medkitList[i];
+            if (go == null) continue;
+
+            go.layer = intLayer >= 0 ? intLayer : 0;
+
+            var col = go.GetComponent<Collider>();
+            if (col == null)
+            {
+                var sc = go.AddComponent<SphereCollider>();
+                sc.radius = 2.5f;
+                sc.isTrigger = true;
+            }
+            else
+            {
+                col.isTrigger = true;
+                if (col is SphereCollider sc && sc.radius < 2.0f) sc.radius = 2.5f;
+            }
+
+            var mr = go.GetComponent<MeshRenderer>();
+            if (mr != null) mr.enabled = false;
+
+            var pickup = go.GetComponent<PickupItem>();
+            if (pickup == null) pickup = go.AddComponent<PickupItem>();
+
+            var so = new SerializedObject(pickup);
+            so.FindProperty("itemType").enumValueIndex = (int)PickupItem.ItemType.Medkit;
+            so.FindProperty("itemName").stringValue = "Túi Cứu Thương (First Aid Kit)";
+            so.FindProperty("pickupMessage").stringValue = "✓ ĐÃ DÙNG TÚI CỨU THƯƠNG (+50 HP)! Phục hồi máu.";
+            so.FindProperty("healAmount").intValue = 50;
+            so.FindProperty("bobSpeed").floatValue = 1.8f;
+            so.FindProperty("bobAmount").floatValue = 0.12f;
+            so.FindProperty("rotateSpeed").floatValue = 55f;
+            so.ApplyModifiedProperties();
+
+            var oldRoot = go.transform.Find("PSX_ModelRoot");
+            if (oldRoot != null) Object.DestroyImmediate(oldRoot.gameObject);
+            var oldWrench = go.transform.Find("WrenchModel");
+            if (oldWrench != null) Object.DestroyImmediate(oldWrench.gameObject);
+
+            string chosenPath = prefabPaths[i % prefabPaths.Length];
+            var kitPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(chosenPath);
+            if (kitPrefab != null)
+            {
+                var root = new GameObject("PSX_ModelRoot");
+                root.transform.SetParent(go.transform, false);
+                root.transform.localPosition = Vector3.zero;
+                root.transform.localRotation = Quaternion.identity;
+                root.transform.localScale = Vector3.one * 0.45f;
+
+                var inst = (GameObject)PrefabUtility.InstantiatePrefab(kitPrefab, root.transform);
+                inst.name = kitPrefab.name;
+                inst.transform.localPosition = new Vector3(0, -0.6f, 0);
+                inst.transform.localRotation = Quaternion.identity;
+                inst.transform.localScale = Vector3.one;
+
+                foreach (var c in inst.GetComponentsInChildren<Collider>())
+                {
+                    Object.DestroyImmediate(c);
+                }
+
+                if (urpLit != null)
+                {
+                    foreach (var r in inst.GetComponentsInChildren<Renderer>())
+                    {
+                        foreach (var mat in r.sharedMaterials)
+                        {
+                            if (mat != null && mat.shader != urpLit)
+                            {
+                                mat.shader = urpLit;
+                                EditorUtility.SetDirty(mat);
+                            }
+                        }
+                    }
+                }
+            }
+
+            var oldLight = go.transform.Find("ItemGlowLight");
+            if (oldLight != null) Object.DestroyImmediate(oldLight.gameObject);
+
+            var lGO = new GameObject("ItemGlowLight");
+            lGO.transform.SetParent(go.transform, false);
+            lGO.transform.localPosition = new Vector3(0, 0.4f, 0);
+            var light = lGO.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.range = 6.0f;
+            light.intensity = 2.8f;
+            light.color = new Color(0.2f, 1f, 0.4f);
+
+            var oldLbl = go.transform.Find("Item3DLabel");
+            if (oldLbl != null) Object.DestroyImmediate(oldLbl.gameObject);
+
+            var lblGO = new GameObject("Item3DLabel");
+            lblGO.transform.SetParent(go.transform, false);
+            lblGO.transform.localPosition = new Vector3(0, 1.3f, 0);
+            lblGO.transform.localRotation = Quaternion.Euler(0, 180f, 0);
+            lblGO.transform.localScale = Vector3.one * 0.026f;
+            var tm = lblGO.AddComponent<TextMesh>();
+            tm.text = "[ Túi Cứu Thương (+50 HP) ]";
+            tm.fontSize = 32;
+            tm.fontStyle = FontStyle.Bold;
+            tm.alignment = TextAlignment.Center;
+            tm.anchor = TextAnchor.MiddleCenter;
+            tm.color = new Color(0.25f, 1f, 0.45f);
+
+            EditorUtility.SetDirty(go);
+        }
     }
 }
 #endif

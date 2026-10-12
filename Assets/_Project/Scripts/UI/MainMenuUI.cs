@@ -33,6 +33,7 @@ public class MainMenuUI : MonoBehaviour
         if (mainPanel != null) mainPanel.SetActive(true);
 
         EnsureLeaderboardElements();
+        RelayoutMainMenu();
         SetupButtons();
     }
 
@@ -57,19 +58,19 @@ public class MainMenuUI : MonoBehaviour
             nameBoxR.anchorMin = new Vector2(0.5f, 0.5f);
             nameBoxR.anchorMax = new Vector2(0.5f, 0.5f);
             nameBoxR.pivot = new Vector2(0.5f, 0.5f);
-            nameBoxR.anchoredPosition = new Vector2(0f, 105f);
-            nameBoxR.sizeDelta = new Vector2(360f, 65f);
+            nameBoxR.anchoredPosition = new Vector2(0f, 95f);
+            nameBoxR.sizeDelta = new Vector2(340f, 60f);
 
             // Label tiêu đề
             var lblGO = new GameObject("Label");
             lblGO.transform.SetParent(nameBoxGO.transform, false);
             var lblR = lblGO.AddComponent<RectTransform>();
             lblR.anchoredPosition = new Vector2(0f, 18f);
-            lblR.sizeDelta = new Vector2(360f, 25f);
+            lblR.sizeDelta = new Vector2(340f, 22f);
             var lblTxt = lblGO.AddComponent<Text>();
             lblTxt.text = "👤 NHẬP TÊN ĐỂ GHI DANH RANK:";
             lblTxt.font = font;
-            lblTxt.fontSize = 14;
+            lblTxt.fontSize = 13;
             lblTxt.fontStyle = FontStyle.Bold;
             lblTxt.alignment = TextAnchor.MiddleCenter;
             lblTxt.color = new Color(0.35f, 0.9f, 1f);
@@ -78,8 +79,8 @@ public class MainMenuUI : MonoBehaviour
             var inputGO = new GameObject("PlayerNameInput");
             inputGO.transform.SetParent(nameBoxGO.transform, false);
             var inputR = inputGO.AddComponent<RectTransform>();
-            inputR.anchoredPosition = new Vector2(0f, -12f);
-            inputR.sizeDelta = new Vector2(340f, 38f);
+            inputR.anchoredPosition = new Vector2(0f, -10f);
+            inputR.sizeDelta = new Vector2(340f, 36f);
 
             var inputImg = inputGO.AddComponent<Image>();
             inputImg.color = new Color(0.06f, 0.12f, 0.22f, 0.95f);
@@ -98,7 +99,7 @@ public class MainMenuUI : MonoBehaviour
             txtR.offsetMax = new Vector2(-10f, 0f);
             var txt = txtGO.AddComponent<Text>();
             txt.font = font;
-            txt.fontSize = 16;
+            txt.fontSize = 15;
             txt.fontStyle = FontStyle.Bold;
             txt.color = Color.yellow;
             txt.alignment = TextAnchor.MiddleCenter;
@@ -114,7 +115,7 @@ public class MainMenuUI : MonoBehaviour
             var phTxt = phGO.AddComponent<Text>();
             phTxt.text = "Nhập tên của bạn...";
             phTxt.font = font;
-            phTxt.fontSize = 16;
+            phTxt.fontSize = 15;
             phTxt.fontStyle = FontStyle.Italic;
             phTxt.color = new Color(0.6f, 0.7f, 0.8f, 0.6f);
             phTxt.alignment = TextAnchor.MiddleCenter;
@@ -150,11 +151,11 @@ public class MainMenuUI : MonoBehaviour
             btnR.anchorMin = new Vector2(0.5f, 0.5f);
             btnR.anchorMax = new Vector2(0.5f, 0.5f);
             btnR.pivot = new Vector2(0.5f, 0.5f);
-            btnR.anchoredPosition = new Vector2(0f, -60f);
+            btnR.anchoredPosition = new Vector2(0f, -35f);
             btnR.sizeDelta = new Vector2(340f, 48f);
 
             var btnImg = btnGO.AddComponent<Image>();
-            btnImg.color = new Color(0.72f, 0.52f, 0.08f, 0.95f); // Vàng kim quý phái
+            btnImg.color = new Color(0.72f, 0.52f, 0.08f, 0.95f);
 
             var btnOl = btnGO.AddComponent<Outline>();
             btnOl.effectColor = new Color(1f, 0.85f, 0.2f, 0.95f);
@@ -173,7 +174,7 @@ public class MainMenuUI : MonoBehaviour
             var txt = txtGO.AddComponent<Text>();
             txt.text = "🏆 BẢNG XẾP HẠNG (RANK)";
             txt.font = font;
-            txt.fontSize = 18;
+            txt.fontSize = 17;
             txt.fontStyle = FontStyle.Bold;
             txt.alignment = TextAnchor.MiddleCenter;
             txt.color = Color.white;
@@ -184,6 +185,104 @@ public class MainMenuUI : MonoBehaviour
         {
             leaderboardButton.onClick.RemoveAllListeners();
             leaderboardButton.onClick.AddListener(OnLeaderboardClicked);
+        }
+    }
+
+    private void RelayoutMainMenu()
+    {
+        Transform root = (mainPanel != null) ? mainPanel.transform : transform;
+        Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+        // 1. TitleText
+        var titleTrans = root.Find("TitleText");
+        if (titleTrans != null)
+        {
+            var titleR = titleTrans.GetComponent<RectTransform>();
+            if (titleR != null)
+            {
+                titleR.anchoredPosition = new Vector2(0f, 165f);
+                titleR.sizeDelta = new Vector2(500f, 60f);
+            }
+            var titleTxt = titleTrans.GetComponent<Text>();
+            if (titleTxt != null)
+            {
+                titleTxt.text = "ESCAPE THE LAB";
+                titleTxt.fontSize = 36;
+                titleTxt.fontStyle = FontStyle.Bold;
+                titleTxt.color = new Color(0.2f, 0.85f, 1f);
+                titleTxt.alignment = TextAnchor.MiddleCenter;
+            }
+        }
+
+        // 2. PlayButton
+        if (playButton != null)
+        {
+            var playR = playButton.GetComponent<RectTransform>();
+            if (playR != null)
+            {
+                playR.anchoredPosition = new Vector2(0f, 25f);
+                playR.sizeDelta = new Vector2(340f, 48f);
+            }
+            FormatMenuButton(playButton, new Color(0.12f, 0.42f, 0.82f), new Color(0.25f, 0.75f, 1f), "[ PLAY ]", font);
+        }
+
+        // 3. LeaderboardButton
+        if (leaderboardButton != null)
+        {
+            var lbR = leaderboardButton.GetComponent<RectTransform>();
+            if (lbR != null)
+            {
+                lbR.anchoredPosition = new Vector2(0f, -35f);
+                lbR.sizeDelta = new Vector2(340f, 48f);
+            }
+            FormatMenuButton(leaderboardButton, new Color(0.72f, 0.52f, 0.08f), new Color(1f, 0.85f, 0.2f), "🏆 BẢNG XẾP HẠNG (RANK)", font);
+        }
+
+        // 4. SettingsButton
+        if (settingsButton != null)
+        {
+            var setR = settingsButton.GetComponent<RectTransform>();
+            if (setR != null)
+            {
+                setR.anchoredPosition = new Vector2(0f, -95f);
+                setR.sizeDelta = new Vector2(340f, 48f);
+            }
+            FormatMenuButton(settingsButton, new Color(0.15f, 0.35f, 0.65f), new Color(0.35f, 0.7f, 1f), "⚙ CÀI ĐẶT (SETTINGS)", font);
+        }
+
+        // 5. ExitButton
+        if (exitButton != null)
+        {
+            var exitR = exitButton.GetComponent<RectTransform>();
+            if (exitR != null)
+            {
+                exitR.anchoredPosition = new Vector2(0f, -155f);
+                exitR.sizeDelta = new Vector2(340f, 48f);
+            }
+            FormatMenuButton(exitButton, new Color(0.25f, 0.12f, 0.18f), new Color(0.85f, 0.25f, 0.35f), "[ EXIT ]", font);
+        }
+    }
+
+    private void FormatMenuButton(Button btn, Color bgColor, Color outlineColor, string labelText, Font font)
+    {
+        if (btn == null) return;
+        var img = btn.GetComponent<Image>();
+        if (img != null) img.color = bgColor;
+
+        var ol = btn.GetComponent<Outline>();
+        if (ol == null) ol = btn.gameObject.AddComponent<Outline>();
+        ol.effectColor = outlineColor;
+        ol.effectDistance = new Vector2(1.5f, -1.5f);
+
+        var txt = btn.GetComponentInChildren<Text>();
+        if (txt != null)
+        {
+            txt.text = labelText;
+            txt.font = font;
+            txt.fontSize = 17;
+            txt.fontStyle = FontStyle.Bold;
+            txt.alignment = TextAnchor.MiddleCenter;
+            txt.color = Color.white;
         }
     }
 

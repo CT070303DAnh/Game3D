@@ -86,11 +86,11 @@ public class WallCodeSpawner : MonoBehaviour
         fMat.SetColor("_EmissionColor", color * 1.2f);
         border.GetComponent<Renderer>().material = fMat;
 
-        // 2. Collider tuong tac
-        BoxCollider box = clueGO.AddComponent<BoxCollider>();
-        box.size = new Vector3(2.0f, 2.0f, 1.5f);
-        box.center = new Vector3(0, 0, 0.6f);
-        box.isTrigger = true;
+        // Xóa sạch collider của primitive để người chơi chỉ nhìn bằng mắt, không hiện nút [E]
+        var boardCol = board.GetComponent<Collider>();
+        if (boardCol != null) Destroy(boardCol);
+        var borderCol = border.GetComponent<Collider>();
+        if (borderCol != null) Destroy(borderCol);
 
         // 3. TextMesh chu so (Quay mat ra huong forward phong)
         GameObject textGO = new GameObject("DigitText");

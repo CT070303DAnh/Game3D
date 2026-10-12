@@ -106,6 +106,7 @@ public class InventoryUI : MonoBehaviour
         GameState.OnFuseCollected         += UpdateInventoryText;
         GameState.OnAccessCodeSolved      += UpdateInventoryText;
         GameState.OnWrenchCollected       += UpdateInventoryText;
+        GameState.OnEngineerCardCollected += UpdateInventoryText;
         GameState.OnJetFuelCollected      += UpdateInventoryText;
         GameState.OnRadarActivated        += UpdateInventoryText;
         GameState.OnExitUnlocked          += UpdateInventoryText;
@@ -117,6 +118,7 @@ public class InventoryUI : MonoBehaviour
         GameState.OnFuseCollected         -= UpdateInventoryText;
         GameState.OnAccessCodeSolved      -= UpdateInventoryText;
         GameState.OnWrenchCollected       -= UpdateInventoryText;
+        GameState.OnEngineerCardCollected -= UpdateInventoryText;
         GameState.OnJetFuelCollected      -= UpdateInventoryText;
         GameState.OnRadarActivated        -= UpdateInventoryText;
         GameState.OnExitUnlocked          -= UpdateInventoryText;
@@ -203,6 +205,10 @@ public class InventoryUI : MonoBehaviour
         if (iconCache.TryGetValue(name, out Sprite s)) return s;
 
         s = Resources.Load<Sprite>("ItemIcons/" + name);
+        if (s == null && name == "EngineerCard")
+        {
+            s = Resources.Load<Sprite>("ItemIcons/SecurityCard");
+        }
         if (s != null) iconCache[name] = s;
         return s;
     }
@@ -411,13 +417,13 @@ public class InventoryUI : MonoBehaviour
             new Color(0.3f, 0.75f, 1f),
             () => GameState.Instance != null && (GameState.Instance.AccessCodeFound || GameState.Instance.AccessCodeSolved));
 
-        // 6. 3 Van Khí Độc
-        CreateSlot(gridGO.transform, "Valve",
-            "HỆ THỐNG 3 VAN KHÍ ĐỘC",
-            "Cả 3 van đã được đóng kín! Không khí an toàn",
-            "Cần dùng Cờ Lê khóa hết 3 van đang xả khí",
-            new Color(0.2f, 1f, 0.4f),
-            () => ToxicGasManager.IsAirSafe);
+        // 6. Thẻ Kỹ Sư (Màn 2)
+        CreateSlot(gridGO.transform, "EngineerCard",
+            "THẺ KỸ SƯ (ENGINEER KEYCARD)",
+            "Quẹt thẻ tại Bảng Điều Khiển để mở Thang Máy (Màn 2)",
+            "Chưa nhặt - Tìm trên bàn làm việc trong phòng",
+            new Color(1f, 0.85f, 0.2f),
+            () => GameState.Instance != null && GameState.Instance.EngineerCardCollected);
 
         // 7. Pin Năng Lượng (+HP)
         CreateSlot(gridGO.transform, "Battery",

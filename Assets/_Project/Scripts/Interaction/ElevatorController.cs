@@ -129,6 +129,7 @@ public class ElevatorController : MonoBehaviour, IInteractable
             interiorLight.intensity = 2.5f;
         }
 
+        ObjectiveManager.Instance?.CompleteObjective("elevator_code");
         StartCoroutine(StartElevatorSequence());
     }
 

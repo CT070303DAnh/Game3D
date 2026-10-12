@@ -28,8 +28,10 @@ public class AccessCodePuzzle : MonoBehaviour, IInteractable
         {
             if (solved) return "Quyền truy cập đã mở (Đã giải mã màu)";
             if (GameState.Instance != null && !GameState.Instance.PowerRestored)
-                return "Terminal Mã Màu Thoát Hiểm [E] (CẦN BẬT ĐIỆN MÁY PHÁT TRƯỚC)";
-            return "Nhập Mã Màu Cửa Thoát Hiểm [E] (BLUE \u2794 RED \u2794 GREEN)";
+                return "Terminal Cửa Thoát Hiểm [E] (CHƯA CÓ ĐIỆN - CẦN BẬT MÁY PHÁT)";
+            if (GameState.Instance != null && !GameState.Instance.SecurityTerminalViewed)
+                return "Terminal Cửa Thoát Hiểm [E] (CẦN XEM DỮ LIỆU TẠI SECURITY TERMINAL)";
+            return "Nhập Mật Mã Màu Cửa Thoát Hiểm [E]";
         }
     }
 
@@ -38,7 +40,15 @@ public class AccessCodePuzzle : MonoBehaviour, IInteractable
         if (solved) return;
         if (GameState.Instance != null && !GameState.Instance.PowerRestored)
         {
-            NotificationUI.ShowMessage("Terminal chưa có điện! Hãy lắp Cầu Chì và bật Máy Phát Điện (Phòng A) trước.");
+            GameAudioManager.PlayTerminalError(transform.position);
+            NotificationUI.ShowMessage("❌ Terminal chưa có điện! Hãy lắp Cầu Chì và bật Máy Phát Điện (Phòng Kho) trước.");
+            return;
+        }
+
+        if (GameState.Instance != null && !GameState.Instance.SecurityTerminalViewed)
+        {
+            GameAudioManager.PlayTerminalError(transform.position);
+            NotificationUI.ShowMessage("❌ BẠN CHƯA BIẾT THỨ TỰ MẬT MÃ! Hãy tìm Giấy Ghi Chú và đọc dữ liệu tại Security Terminal trước.");
             return;
         }
 
@@ -61,15 +71,14 @@ public class AccessCodePuzzle : MonoBehaviour, IInteractable
             {
                 GameAudioManager.PlayTerminalSuccess();
                 AccessCodeUI.SetStatus("✓ [3/3] ĐÚNG TOÀN BỘ MÃ MÀU! ĐANG MỞ KHÓA CỬA THOÁT HIỂM...", Color.green);
-                NotificationUI.ShowMessage($"✓ [3/3] ĐÚNG MÀU {color}! HOÀN TẤT MẬT MÃ MÀU!");
+                NotificationUI.ShowMessage("✓ [3/3] XÁC THỰC MẬT MÃ MÀU THÀNH CÔNG! ĐÃ MỞ KHÓA CỬA THOÁT HIỂM!");
                 StartCoroutine(Solve());
             }
             else
             {
                 GameAudioManager.PlayTerminalKey();
-                string nextHint = currentStep == 1 ? "RED" : "GREEN";
-                AccessCodeUI.SetStatus($"✓ [{currentStep}/3] Đúng màu {color}! Tiếp theo: {nextHint}", Color.cyan);
-                NotificationUI.ShowMessage($"✓ [{currentStep}/{correctSequence.Length}] Đúng màu {color}! Tiếp theo: {nextHint}");
+                AccessCodeUI.SetStatus($"✓ [{currentStep}/3] Đúng màu thứ {currentStep}! Hãy nhập tiếp màu thứ {currentStep + 1}...", Color.cyan);
+                NotificationUI.ShowMessage($"✓ [{currentStep}/{correctSequence.Length}] Đúng màu thứ {currentStep}!");
             }
         }
         else
@@ -96,8 +105,8 @@ public class AccessCodePuzzle : MonoBehaviour, IInteractable
         yield return new WaitForSecondsRealtime(resetDelay);
         currentStep = 0;
         ResetAllLamps();
-        AccessCodeUI.SetStatus("Vui lòng nhập thứ tự màu: BLUE \u2794 RED \u2794 GREEN\n(Bấm nút chuột hoặc phím số [1] [2] [3])", new Color(0.3f, 0.9f, 1f));
-        NotificationUI.ShowMessage("Đã đặt lại mã màu. Hãy nhập lại: BLUE ➔ RED ➔ GREEN.");
+        AccessCodeUI.SetStatus("Vui lòng nhập thứ tự 3 màu bảo mật từ Security Terminal:\n(Bấm nút chuột hoặc phím số [1: Blue] [2: Red] [3: Green])", new Color(0.3f, 0.9f, 1f));
+        NotificationUI.ShowMessage("Mã sai! Đã đặt lại. Hãy nhập lại 3 màu từ Security Terminal.");
     }
 
     private void SetLampState(int index, bool on)

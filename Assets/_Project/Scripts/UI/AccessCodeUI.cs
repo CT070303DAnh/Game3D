@@ -224,7 +224,7 @@ public class AccessCodeUI : MonoBehaviour
 
         if (inst.statusText != null)
         {
-            inst.statusText.text = "Vui lòng nhập thứ tự màu: BLUE \u2794 RED \u2794 GREEN\n(Bấm nút chuột hoặc phím số [1] [2] [3])";
+            inst.statusText.text = "Vui lòng nhập thứ tự 3 màu bảo mật từ Security Terminal:\n(Bấm nút chuột hoặc phím số [1: Blue] [2: Red] [3: Green])";
             inst.statusText.color = new Color(0.3f, 0.9f, 1f);
         }
 
@@ -315,7 +315,7 @@ public class AccessCodeUI : MonoBehaviour
         statusText.fontSize = 16;
         statusText.alignment = TextAnchor.MiddleCenter;
         statusText.color = new Color(0.2f, 0.9f, 1f);
-        statusText.text = "Vui lòng nhập thứ tự màu: BLUE \u2794 RED \u2794 GREEN\n(Bấm nút chuột hoặc phím số [1] [2] [3])";
+        statusText.text = "Vui lòng nhập thứ tự 3 màu bảo mật từ Security Terminal:\n(Bấm nút chuột hoặc phím số [1: Blue] [2: Red] [3: Green])";
 
         // Nut 1: BLUE
         blueButton = CreateButton(pnl.transform, "BlueBtn", "1. BLUE [1]", new Vector2(-155, -15), new Vector2(140, 65), new Color(0.12f, 0.38f, 0.95f), arial);

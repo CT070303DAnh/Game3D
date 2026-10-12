@@ -38,11 +38,20 @@ public class CoolingValve : MonoBehaviour, IInteractable
 
     private void Awake()
     {
+        // Bỏ hoàn toàn khóa van ở trụ tròn to màu đen (Valve_Reactor)
+        if (gameObject.name.IndexOf("Reactor", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+            gameObject.name.IndexOf("Core", System.StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            gameObject.SetActive(false);
+            Destroy(gameObject);
+            return;
+        }
+
         var col = GetComponent<Collider>();
         if (col == null)
         {
             var sc = gameObject.AddComponent<SphereCollider>();
-            sc.radius = 1.8f;
+            sc.radius = 2.0f;
             sc.isTrigger = true;
         }
     }
@@ -141,7 +150,7 @@ public class CoolingValve : MonoBehaviour, IInteractable
         isSpinning = true;
         isClosed = true;
 
-        // Am thanh van van
+        // Âm thanh vặn van
         GameAudioManager.PlayValveTurn(transform.position);
 
         AudioSource audio = GetComponent<AudioSource>();
@@ -152,7 +161,7 @@ public class CoolingValve : MonoBehaviour, IInteractable
         }
         audio.pitch = 1.0f;
 
-        // Xoay tay quay van dong chat
+        // Xoay tay quay van đóng chặt (1.0 giây như ban đầu)
         if (wheelTransform != null)
         {
             float elapsed = 0f;
@@ -207,8 +216,8 @@ public class CoolingValve : MonoBehaviour, IInteractable
         // Hook cho reset tien do van
     }
 
-    public static int totalValvesCount => 3;
-    public static int turnedValvesCount => 3 - ToxicGasManager.OpenValvesCount;
+    public static int totalValvesCount => 2;
+    public static int turnedValvesCount => 2 - ToxicGasManager.OpenValvesCount;
     public static bool AllValvesTurned => ToxicGasManager.IsAirSafe;
 
     private static Texture2D _cachedSoftPuffTex;

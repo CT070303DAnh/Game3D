@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 /// <summary>
 /// CameraModeManager: Quan ly chuyen doi goc nhin Camera (First Person FPS <-> Third Person PUBG).
@@ -12,7 +12,7 @@ public class CameraModeManager : MonoBehaviour
     public enum CameraMode { FirstPerson, ThirdPersonPUBG }
 
     [Header("Camera Mode Settings")]
-    [SerializeField] private CameraMode defaultMode = CameraMode.FirstPerson;
+    [SerializeField] private CameraMode defaultMode = CameraMode.ThirdPersonPUBG;
     [SerializeField] private KeyCode toggleKey = KeyCode.V;
 
     [Header("First Person Settings")]
@@ -161,11 +161,12 @@ public class CameraModeManager : MonoBehaviour
         fpc.SetPlayerBody(player.transform);
 
         // 4. An Mesh than Player (chi do bong, khong che mat camera)
+        playerRenderers = player.GetComponentsInChildren<Renderer>(true);
         if (playerRenderers != null)
         {
             foreach (var r in playerRenderers)
             {
-                if (r != null && r.gameObject == player)
+                if (r != null)
                 {
                     r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
                 }
@@ -207,11 +208,12 @@ public class CameraModeManager : MonoBehaviour
         mainCam.nearClipPlane = 0.1f;
 
         // 4. Hien lai Renderer than Player
+        playerRenderers = player.GetComponentsInChildren<Renderer>(true);
         if (playerRenderers != null)
         {
             foreach (var r in playerRenderers)
             {
-                if (r != null && r.gameObject == player)
+                if (r != null)
                 {
                     r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
                     r.enabled = true;

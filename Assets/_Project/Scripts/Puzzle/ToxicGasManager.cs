@@ -12,14 +12,14 @@ public class ToxicGasManager : MonoBehaviour
     public static ToxicGasManager Instance { get; private set; }
 
     [Header("Gas Settings")]
-    [SerializeField] private int totalValves = 3;
-    [SerializeField] private int openValves = 3;
+    [SerializeField] private int totalValves = 2;
+    [SerializeField] private int openValves = 2;
 
     private float timer = 0f;
     private PlayerHealth playerHealth;
     private bool isAllCleared = false;
 
-    public static int OpenValvesCount => Instance != null ? Instance.openValves : 3;
+    public static int OpenValvesCount => Instance != null ? Instance.openValves : 2;
     public static bool IsAirSafe => Instance != null && Instance.openValves <= 0;
 
     private void Awake()
@@ -30,6 +30,7 @@ public class ToxicGasManager : MonoBehaviour
             return;
         }
         Instance = this;
+        totalValves = 2;
         openValves = totalValves;
         isAllCleared = false;
         timer = 0f;
@@ -40,7 +41,7 @@ public class ToxicGasManager : MonoBehaviour
         playerHealth = FindFirstObjectByType<PlayerHealth>();
 
         // Thong bao ngay khi bat dau man choi
-        NotificationUI.ShowMessage("CẢNH BÁO: RÒ RỈ KHÍ ĐỘC! Lấy Cờ Lê tại Kho Phụ Tùng (Phía Bắc) để vặn khóa 3 van xả khí!");
+        NotificationUI.ShowMessage("CẢNH BÁO: RÒ RỈ KHÍ ĐỘC! Lấy Cờ Lê tại Kho Phụ Tùng (Phía Bắc) để vặn khóa 2 van xả khí!");
     }
 
     private void Update()
@@ -49,13 +50,7 @@ public class ToxicGasManager : MonoBehaviour
         if (GameManager.Instance != null && !GameManager.Instance.IsPlaying) return;
 
         // Xac dinh khoang thoi gian tru mau dua tren so van dang mo
-        float interval;
-        if (openValves >= 3)
-            interval = 1.0f; // 3 van: -1 mau / 1 giay
-        else if (openValves == 2)
-            interval = 2.0f; // 2 van: -1 mau / 2 giay
-        else
-            interval = 3.0f; // 1 van: -1 mau / 3 giay
+        float interval = openValves >= 2 ? 1.5f : 3.0f;
 
         timer += Time.deltaTime;
         if (timer >= interval)
@@ -73,7 +68,7 @@ public class ToxicGasManager : MonoBehaviour
         playerHealth.TakeEnvironmentalDamage(1);
 
         // Hien thong bao canh bao nhe nhang de nguoi choi biet nguyen nhan mat mau
-        string rateStr = openValves >= 3 ? "(-1 HP/s)" : (openValves == 2 ? "(-1 HP/2s)" : "(-1 HP/3s)");
+        string rateStr = openValves >= 2 ? "(-1 HP/1.5s)" : "(-1 HP/3s)";
         NotificationUI.ShowMessage($"ĐANG BỊ NGẠT KHÍ ĐỘC! {openValves} van đang xả {rateStr}");
     }
 
@@ -86,13 +81,12 @@ public class ToxicGasManager : MonoBehaviour
 
         if (Instance.openValves > 0)
         {
-            string newRate = Instance.openValves == 2 ? "-1 HP/2 giây" : "-1 HP/3 giây";
-            NotificationUI.ShowMessage($"ĐÃ ĐÓNG VAN KHÍ ({Instance.totalValves - Instance.openValves}/{Instance.totalValves})! Nồng độ giảm: {newRate}.");
+            NotificationUI.ShowMessage($"ĐÃ ĐÓNG VAN KHÍ ({Instance.totalValves - Instance.openValves}/{Instance.totalValves})! Nồng độ giảm: -1 HP/3 giây.");
         }
         else
         {
             Instance.isAllCleared = true;
-            NotificationUI.ShowMessage("✓ ĐÃ ĐÓNG HẾT 3 VAN XẢ KHÍ! KHÔNG KHÍ ĐÃ AN TOÀN.");
+            NotificationUI.ShowMessage("✓ ĐÃ ĐÓNG HẾT 2 VAN XẢ KHÍ! KHÔNG KHÍ ĐÃ AN TOÀN.");
             ObjectiveManager.Instance?.CompleteObjective("valves");
         }
     }

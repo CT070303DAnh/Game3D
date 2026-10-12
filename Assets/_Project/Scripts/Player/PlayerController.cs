@@ -63,6 +63,9 @@ public class PlayerController : MonoBehaviour
     {
         characterController = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
+        if (animator == null)
+            animator = GetComponentInChildren<Animator>();
+            
         // Kiem tra co AnimatorController chua de tranh warning spam
         hasAnimatorController = animator != null && animator.runtimeAnimatorController != null;
 
@@ -201,23 +204,48 @@ public class PlayerController : MonoBehaviour
 
         // Lay yaw cua camera (huong camera dang nhin)
         float camYaw = 0f;
-        if (pubgCam != null)
+        if (pubgCam == null) pubgCam = FindFirstObjectByType<PubgCamera>();
+
+        if (pubgCam != null && pubgCam.enabled)
+        {
             camYaw = pubgCam.CameraYaw;          // PUBG: lay tu PubgCamera
+        }
         else if (cameraTransform != null)
+        {
             camYaw = cameraTransform.eulerAngles.y; // FPS / Classic TPS
+        }
+        else if (Camera.main != null)
+        {
+            cameraTransform = Camera.main.transform;
+            camYaw = cameraTransform.eulerAngles.y;
+        }
 
         // Huong di chuyen = input + camera yaw
         float targetAngle = Mathf.Atan2(moveInput.x, moveInput.y) * Mathf.Rad2Deg + camYaw;
         Vector3 moveDir   = Quaternion.Euler(0f, targetAngle, 0f) * Vector3.forward;
 
-        if (isFPS)
+        // Kiem tra co dang o che do FPS khong
+        bool isFPSMode = false;
+        if (CameraModeManager.Instance != null)
         {
-            // FPS: than player xoay cung camera (FirstPersonCamera lo viec nay)
+            isFPSMode = CameraModeManager.ActiveMode == CameraModeManager.CameraMode.FirstPerson;
         }
         else
         {
-            // PUBG / Classic TPS:
-            // Nhan vat xoay mat ve HUONG DI CHUYEN, KHONG xoay theo camera
+            var fpc = Camera.main != null ? Camera.main.GetComponent<FirstPersonCamera>() : null;
+            isFPSMode = fpc != null && fpc.enabled;
+        }
+
+        if (isFPSMode)
+        {
+            // FPS: Than player giu huong theo camera yaw
+            transform.rotation = Quaternion.Euler(0f, camYaw, 0f);
+        }
+        else
+        {
+            // TPS / Third Person (Mặc định):
+            // Nhan vat xoay mat ve HUONG DI CHUYEN:
+            // Di ve huong nao thi nguoi se quay mat ve dung huong do
             float smoothAngle = Mathf.SmoothDampAngle(
                 transform.eulerAngles.y, targetAngle,
                 ref rotationVelocity, rotationSmoothTime);
